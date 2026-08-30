@@ -243,6 +243,16 @@ table.datatable tr:last-child td{border-bottom:none;}
 .small-note{font-size:12px;color:var(--ink-soft);margin-top:4px;}
 .section-divider{border:none;border-top:1px solid var(--line);margin:18px 0;}
 
+/* Frame amplio de previsualización del reporte (visible, antes de generar el PDF) */
+.report-preview-frame{
+  width:100%;max-height:75vh;overflow:auto;background:#eae6d8;border:1px solid var(--line-strong);
+  border-radius:12px;padding:28px;display:flex;justify-content:center;
+}
+.report-preview-frame .doc-page{box-shadow:0 10px 30px rgba(0,0,0,0.18);flex-shrink:0;}
+@media (max-width:700px){
+  .report-preview-frame{padding:16px;max-height:65vh;}
+}
+
 /* Printable cuenta de cobro template (offscreen) */
 #print-root{position:fixed;left:-9999px;top:0;}
 .doc-page{
@@ -409,7 +419,16 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="field"><label>Desde</label><input type="date" id="rep-desde"></div>
           <div class="field"><label>Hasta</label><input type="date" id="rep-hasta"></div>
         </div>
-        <button class="btn btn-primary" onclick="Reportes.generarAuxiliar()">Generar reporte en PDF</button>
+        <button class="btn btn-primary" onclick="Reportes.generarAuxiliar()">Previsualizar reporte</button>
+      </div>
+      <div class="card hidden" id="preview-aux-card">
+        <h3>Previsualización de la cuenta de cobro</h3>
+        <p class="small-note" style="margin-top:-6px;">Revisa que todo esté correcto antes de generar el PDF final.</p>
+        <div class="report-preview-frame" id="preview-aux-frame"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
+          <button class="btn btn-primary" onclick="Reportes.confirmarDescargaAux()">Generar PDF</button>
+          <button class="btn btn-ghost" onclick="Reportes.cerrarPreviewAux()">Cerrar previsualización</button>
+        </div>
       </div>
     </div>
 
@@ -459,7 +478,16 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="field"><label>Desde</label><input type="date" id="admrep-desde"></div>
           <div class="field"><label>Hasta</label><input type="date" id="admrep-hasta"></div>
         </div>
-        <button class="btn btn-primary" onclick="Reportes.generarAdmin()">Generar reporte en PDF</button>
+        <button class="btn btn-primary" onclick="Reportes.generarAdmin()">Previsualizar reporte</button>
+      </div>
+      <div class="card hidden" id="preview-admin-card">
+        <h3>Previsualización de la cuenta de cobro</h3>
+        <p class="small-note" style="margin-top:-6px;">Revisa que todo esté correcto antes de generar el PDF final.</p>
+        <div class="report-preview-frame" id="preview-admin-frame"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
+          <button class="btn btn-primary" onclick="Reportes.confirmarDescargaAdmin()">Generar PDF</button>
+          <button class="btn btn-ghost" onclick="Reportes.cerrarPreviewAdmin()">Cerrar previsualización</button>
+        </div>
       </div>
     </div>
 
@@ -1255,22 +1283,35 @@ const Reportes = {
         <div class="sigwrap"><canvas id="rep-sig-canvas"></canvas><span class="sig-hint">Firma aquí con el mouse o el dedo</span></div>
         <div class="sig-actions"><button class="btn btn-ghost btn-sm" onclick="SignaturePads.rep.clear()">Borrar firma</button></div>
       </div>
-      <button class="btn btn-primary btn-block" onclick="Reportes._confirmarFirmaYGenerar('${desde||''}','${hasta||''}')">Confirmar firma y generar PDF</button>
+      <button class="btn btn-primary btn-block" onclick="Reportes._confirmarFirmaYPrevisualizar('${desde||''}','${hasta||''}')">Confirmar firma y previsualizar</button>
     `);
     setTimeout(()=>{
       SignaturePads.rep = new SigPad(document.getElementById('rep-sig-canvas'));
       if(aux.firma_digital) SignaturePads.rep.loadFromDataURL(aux.firma_digital);
     }, 30);
   },
-  async _confirmarFirmaYGenerar(desde, hasta){
+  async _confirmarFirmaYPrevisualizar(desde, hasta){
     const firma = SignaturePads.rep ? SignaturePads.rep.toDataURL() : '';
     if(!firma){ toast('Debes firmar antes de generar el reporte','err'); return; }
     const aux = State.session.auxiliar;
     closeModal();
     const registros = await Reportes._fetchRegistros(aux.id, desde||null, hasta||null);
     const html = Reportes.buildCuentaCobroHTML(aux, registros, desde||null, hasta||null, firma);
-    await Reportes._exportNode(html, `cuenta_de_cobro_${aux.cedula}.pdf`);
+    Reportes._pendingAux = { html, filename: `cuenta_de_cobro_${aux.cedula}.pdf` };
+    document.getElementById('preview-aux-frame').innerHTML = html;
+    document.getElementById('preview-aux-card').classList.remove('hidden');
+    document.getElementById('preview-aux-card').scrollIntoView({behavior:'smooth', block:'start'});
+    toast('Previsualización lista','ok');
+  },
+  async confirmarDescargaAux(){
+    if(!Reportes._pendingAux){ toast('Primero genera la previsualización','err'); return; }
+    await Reportes._exportNode(Reportes._pendingAux.html, Reportes._pendingAux.filename);
     toast('PDF generado','ok');
+  },
+  cerrarPreviewAux(){
+    Reportes._pendingAux = null;
+    document.getElementById('preview-aux-frame').innerHTML = '';
+    document.getElementById('preview-aux-card').classList.add('hidden');
   },
   async generarAdmin(){
     const auxId = document.getElementById('admrep-auxiliar').value;
@@ -1280,8 +1321,21 @@ const Reportes = {
     const aux = State.auxiliaresCache.find(a=>a.id===auxId);
     const registros = await Reportes._fetchRegistros(auxId, desde, hasta);
     const html = Reportes.buildCuentaCobroHTML(aux, registros, desde, hasta);
-    await Reportes._exportNode(html, `cuenta_de_cobro_${aux.cedula}.pdf`);
+    Reportes._pendingAdmin = { html, filename: `cuenta_de_cobro_${aux.cedula}.pdf` };
+    document.getElementById('preview-admin-frame').innerHTML = html;
+    document.getElementById('preview-admin-card').classList.remove('hidden');
+    document.getElementById('preview-admin-card').scrollIntoView({behavior:'smooth', block:'start'});
+    toast('Previsualización lista','ok');
+  },
+  async confirmarDescargaAdmin(){
+    if(!Reportes._pendingAdmin){ toast('Primero genera la previsualización','err'); return; }
+    await Reportes._exportNode(Reportes._pendingAdmin.html, Reportes._pendingAdmin.filename);
     toast('PDF generado','ok');
+  },
+  cerrarPreviewAdmin(){
+    Reportes._pendingAdmin = null;
+    document.getElementById('preview-admin-frame').innerHTML = '';
+    document.getElementById('preview-admin-card').classList.add('hidden');
   }
 };
 
