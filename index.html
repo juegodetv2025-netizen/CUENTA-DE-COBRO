@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Rutas · Cuentas de Cobro — LICONSUMAR</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --navy:#12283f;
+  --navy-2:#0c1c2e;
+  --accent:#f2994a;
+  --accent-dark:#d97e34;
+  --paper:#f5f3ee;
+  --card:#ffffff;
+  --ink:#1b232c;
+  --ink-soft:#5b6673;
+  --line:#e1dccd;
+  --line-strong:#c9c2ac;
+  --success:#2f9e63;
+  --danger:#d1495b;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+}
+h1,h2,h3,.brand,.tab-btn,.nav-item{font-family:'Space Grotesk',sans-serif;}
+.mono{font-family:'IBM Plex Mono',monospace;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+a{color:inherit;}
+
+/* ---------- LOGIN ---------- */
+#login-screen{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(242,153,74,0.16), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(18,40,63,0.18), transparent 45%),
+    var(--navy);
+  padding:24px;
+}
+.login-card{
+  width:100%;max-width:940px;background:var(--paper);border-radius:18px;
+  overflow:hidden;display:grid;grid-template-columns:1.1fr 1.4fr;
+  box-shadow:0 30px 60px -20px rgba(0,0,0,0.5);
+}
+@media (max-width:820px){ .login-card{grid-template-columns:1fr;} .login-hero{display:none;} }
+.login-hero{
+  background:linear-gradient(160deg,var(--navy) 0%,var(--navy-2) 100%);
+  color:#fff;padding:40px 34px;display:flex;flex-direction:column;justify-content:space-between;
+  position:relative;
+}
+.login-hero .platenum{
+  font-family:'IBM Plex Mono',monospace;letter-spacing:3px;font-weight:600;
+  background:var(--accent);color:var(--navy-2);display:inline-block;padding:6px 12px;border-radius:5px;
+  font-size:13px;margin-bottom:18px;
+}
+.login-hero h1{font-size:28px;line-height:1.2;margin:0 0 10px;}
+.login-hero p{color:#c7d0dc;font-size:14px;line-height:1.6;}
+.route-line{margin-top:30px;border-top:1px dashed rgba(255,255,255,0.25);padding-top:16px;font-size:12px;color:#9fb0c2;}
+.login-body{padding:38px 36px;}
+.seg-tabs{display:flex;background:#ece7d9;border-radius:10px;padding:4px;margin-bottom:22px;}
+.seg-tabs button{flex:1;border:none;background:transparent;padding:10px 8px;border-radius:8px;font-weight:600;font-size:13.5px;color:var(--ink-soft);}
+.seg-tabs button.active{background:var(--navy);color:#fff;}
+.subtabs{display:flex;gap:18px;margin-bottom:18px;border-bottom:1px solid var(--line);}
+.subtabs button{background:none;border:none;padding:6px 2px 10px;font-size:13.5px;font-weight:600;color:var(--ink-soft);border-bottom:2px solid transparent;}
+.subtabs button.active{color:var(--navy);border-color:var(--accent);}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;letter-spacing:.2px;}
+.field input,.field select,.field textarea{
+  width:100%;padding:10px 12px;border:1px solid var(--line-strong);border-radius:8px;
+  font-size:14px;background:#fff;color:var(--ink);
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--accent);border-color:var(--accent);}
+.btn{
+  border:none;border-radius:8px;padding:11px 18px;font-weight:600;font-size:14px;
+  display:inline-flex;align-items:center;gap:8px;justify-content:center;transition:transform .05s ease;
+}
+.btn:active{transform:scale(0.98);}
+.btn-primary{background:var(--accent);color:#211200;}
+.btn-primary:hover{background:var(--accent-dark);}
+.btn-navy{background:var(--navy);color:#fff;}
+.btn-navy:hover{background:var(--navy-2);}
+.btn-ghost{background:transparent;color:var(--navy);border:1px solid var(--line-strong);}
+.btn-ghost:hover{background:#efeadd;}
+.btn-danger{background:#fbe7e9;color:var(--danger);}
+.btn-danger:hover{background:#f6d3d6;}
+.btn-sm{padding:6px 10px;font-size:12.5px;border-radius:6px;}
+.btn-block{width:100%;}
+.link-btn{background:none;border:none;color:var(--navy);font-weight:600;font-size:12.5px;text-decoration:underline;padding:0;}
+
+/* ---------- APP SHELL ---------- */
+#app-screen{display:none;min-height:100vh;grid-template-columns:230px 1fr;}
+#app-screen.show{display:grid;}
+.sidebar{background:var(--navy);color:#fff;padding:22px 16px;display:flex;flex-direction:column;}
+.sidebar .brand{font-size:16px;font-weight:700;margin-bottom:2px;}
+.sidebar .brand small{display:block;color:#9fb0c2;font-weight:400;font-size:11px;font-family:'Inter',sans-serif;margin-top:2px;}
+.sidebar .user-chip{margin-top:20px;background:rgba(255,255,255,0.06);border-radius:10px;padding:12px;font-size:12.5px;}
+.sidebar .user-chip .nm{font-weight:600;font-size:13.5px;}
+.sidebar .user-chip .cc{color:#9fb0c2;font-family:'IBM Plex Mono',monospace;margin-top:2px;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:8px;color:#c7d0dc;
+  font-size:13.5px;font-weight:600;margin-top:6px;background:none;border:none;text-align:left;width:100%;
+}
+.nav-item.active{background:var(--accent);color:#211200;}
+.nav-item:hover:not(.active){background:rgba(255,255,255,0.08);}
+.nav-group{margin-top:22px;flex:1;}
+.sidebar .logout{margin-top:auto;}
+.main{padding:28px 34px;overflow-y:auto;height:100vh;}
+.topline{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+.topline h2{margin:0;font-size:21px;}
+.topline .sub{color:var(--ink-soft);font-size:13px;margin-top:3px;}
+.view{display:none;}
+.view.active{display:block;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:18px;}
+.card h3{margin:0 0 16px;font-size:15.5px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+@media (max-width:700px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+/* Ticket-style waybill card for día laborado */
+.ticket{
+  background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 18px 16px 20px;
+  margin-bottom:12px;position:relative;border-left:6px dashed var(--accent);
+  display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;
+}
+.ticket .platebadge{
+  font-family:'IBM Plex Mono',monospace;background:var(--navy);color:#fff;font-weight:600;
+  padding:4px 9px;border-radius:5px;font-size:12.5px;letter-spacing:1px;
+}
+.ticket .tk-main{display:flex;flex-direction:column;gap:5px;flex:1;min-width:220px;}
+.ticket .tk-date{font-weight:700;font-size:13.5px;}
+.ticket .tk-desc{color:var(--ink-soft);font-size:12.5px;}
+.ticket .tk-val{font-weight:700;color:var(--navy);font-size:15px;}
+.ticket.discount{border-left-color:var(--danger);}
+.ticket.discount .tk-val{color:var(--danger);}
+.ticket-actions{display:flex;gap:6px;}
+
+table.datatable{width:100%;border-collapse:collapse;font-size:13px;}
+table.datatable th{text-align:left;background:#eee8d8;padding:9px 10px;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-soft);}
+table.datatable td{padding:9px 10px;border-bottom:1px solid var(--line);}
+table.datatable tr:last-child td{border-bottom:none;}
+
+.pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+.pill-orange{background:#fdecd9;color:var(--accent-dark);}
+.pill-navy{background:#dfe6ee;color:var(--navy);}
+
+.empty-state{padding:30px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
+
+/* Modal */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(12,20,30,0.55);display:none;align-items:flex-start;justify-content:center;
+  padding:40px 16px;overflow-y:auto;z-index:1000;
+}
+.modal-overlay.show{display:flex;}
+.modal-box{background:#fff;border-radius:14px;max-width:620px;width:100%;padding:26px 28px;position:relative;}
+.modal-box h3{margin-top:0;}
+.modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;color:var(--ink-soft);}
+.product-row{display:grid;grid-template-columns:2fr 1fr auto;gap:8px;margin-bottom:8px;align-items:center;}
+
+/* Signature pad */
+.sigwrap{border:1.5px dashed var(--line-strong);border-radius:8px;background:#fcfbf7;position:relative;}
+.sigwrap canvas{width:100%;height:140px;display:block;touch-action:none;border-radius:8px;}
+.sig-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
+.sig-hint{position:absolute;bottom:8px;left:12px;color:#b9b2a0;font-size:12px;pointer-events:none;}
+
+/* Toast */
+#toast{position:fixed;bottom:22px;right:22px;z-index:2000;display:flex;flex-direction:column;gap:8px;}
+.toast-msg{background:var(--navy);color:#fff;padding:12px 16px;border-radius:8px;font-size:13.5px;box-shadow:0 8px 20px rgba(0,0,0,0.25);max-width:300px;}
+.toast-msg.err{background:var(--danger);}
+.toast-msg.ok{background:var(--success);}
+
+.inline-add{display:flex;gap:6px;margin-top:6px;}
+.inline-add input{flex:1;}
+
+.catalog-list{list-style:none;margin:0;padding:0;}
+.catalog-list li{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+.catalog-list li:last-child{border-bottom:none;}
+.catalog-list .cl-name{font-weight:600;}
+.catalog-list .cl-val{color:var(--ink-soft);font-size:12.5px;margin-left:8px;}
+
+.hidden{display:none !important;}
+.small-note{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+.section-divider{border:none;border-top:1px solid var(--line);margin:18px 0;}
+
+/* Printable cuenta de cobro template (offscreen) */
+#print-root{position:fixed;left:-9999px;top:0;}
+.doc-page{
+  width:816px;min-height:1056px;background:#fff;color:#111;padding:70px 66px;
+  font-family:'Times New Roman', Georgia, serif;font-size:14px;box-sizing:border-box;
+}
+.doc-page .doc-fecha{text-align:right;margin-bottom:26px;}
+.doc-page .doc-senores{margin-bottom:4px;}
+.doc-page .doc-empresa{font-weight:bold;text-transform:uppercase;}
+.doc-page .doc-nit{margin-bottom:20px;}
+.doc-page .doc-ref{margin-bottom:6px;}
+.doc-page .doc-debe{text-align:right;margin-bottom:14px;}
+.doc-page .doc-concepto{margin-bottom:22px;line-height:1.5;}
+.doc-page table.doc-table{width:100%;border-collapse:collapse;margin-bottom:6px;}
+.doc-page table.doc-table th{border:1px solid #111;padding:6px 8px;font-size:12.5px;background:#eee;}
+.doc-page table.doc-table td{border:1px solid #111;padding:5px 8px;font-size:12.5px;}
+.doc-page .doc-total-row td{font-weight:bold;}
+.doc-page .doc-pagar{margin:16px 0 30px;font-style:italic;}
+.doc-page .doc-firma-block{margin-top:50px;}
+.doc-page .doc-firma-img{max-width:200px;max-height:80px;display:block;margin-bottom:6px;}
+.doc-page .doc-line{border-top:1px solid #111;width:220px;margin-bottom:4px;}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN SCREEN ===================== -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-hero">
+      <div>
+        <span class="platenum">RUTA · CUADRE · COBRO</span>
+        <h1>Control de días laborados y cuentas de cobro</h1>
+        <p>Registra cada día de servicio en ruta, adjunta soportes y genera automáticamente tu cuenta de cobro lista para enviar a LICONSUMAR DEL MAGDALENA S.A.S.</p>
+      </div>
+      <div class="route-line">LICONSUMAR DEL MAGDALENA S.A.S · NIT 900.988.612-2</div>
+    </div>
+    <div class="login-body">
+      <div class="seg-tabs">
+        <button class="active" id="seg-aux" onclick="UI.setLoginMode('aux')">Auxiliar</button>
+        <button id="seg-admin" onclick="UI.setLoginMode('admin')">Administrador</button>
+      </div>
+
+      <!-- AUXILIAR LOGIN -->
+      <div id="pane-aux">
+        <div class="subtabs">
+          <button class="active" id="sub-ingresar" onclick="UI.setAuxSub('in')">Ingresar</button>
+          <button id="sub-registrar" onclick="UI.setAuxSub('reg')">Crear cuenta</button>
+        </div>
+        <div id="aux-in">
+          <div class="field"><label>Cédula</label><input id="in-cedula" inputmode="numeric" placeholder="Ej. 1082345678"></div>
+          <div class="field"><label>Contraseña (4 dígitos)</label><input id="in-pin" maxlength="4" inputmode="numeric" placeholder="••••"></div>
+          <button class="btn btn-primary btn-block" onclick="Auth.loginAuxiliar()">Ingresar</button>
+          <div style="text-align:center;margin-top:12px;">
+            <button class="link-btn" onclick="UI.openForgot()">¿Olvidaste tu contraseña?</button>
+          </div>
+        </div>
+        <div id="aux-reg" class="hidden">
+          <div class="field"><label>Cédula</label><input id="reg-cedula" inputmode="numeric" placeholder="Ej. 1082345678"></div>
+          <p class="small-note">Al crear tu cuenta se generará una contraseña de 4 dígitos que podrás cambiar luego desde tu perfil.</p>
+          <button class="btn btn-navy btn-block" onclick="Auth.registerAuxiliar()">Crear cuenta</button>
+        </div>
+      </div>
+
+      <!-- ADMIN LOGIN -->
+      <div id="pane-admin" class="hidden">
+        <div class="field"><label>Clave de administrador</label><input id="admin-pass" type="password" maxlength="12" placeholder="••••"></div>
+        <button class="btn btn-navy btn-block" onclick="Auth.loginAdmin()">Ingresar como administrador</button>
+        <p class="small-note">Clave por defecto: 1234 (modificable desde Configuración).</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== APP SHELL ===================== -->
+<div id="app-screen">
+  <div class="sidebar">
+    <div class="brand">LICONSUMAR<br><small>Control de rutas · Cuentas de cobro</small></div>
+    <div class="user-chip">
+      <div class="nm" id="side-nombre">—</div>
+      <div class="cc" id="side-detalle">—</div>
+    </div>
+    <div class="nav-group" id="nav-group"></div>
+    <button class="btn btn-ghost btn-block logout" onclick="Auth.logout()">Cerrar sesión</button>
+  </div>
+  <div class="main">
+    <div class="topline">
+      <div>
+        <h2 id="view-title">—</h2>
+        <div class="sub" id="view-sub"></div>
+      </div>
+    </div>
+
+    <!-- ===== AUXILIAR: ONBOARDING (primer login) ===== -->
+    <div class="view" id="view-onboarding">
+      <div class="card" style="max-width:640px;">
+        <h3>Completa tu perfil</h3>
+        <p class="small-note" style="margin-top:-8px;margin-bottom:16px;">Estos datos aparecerán en tus cuentas de cobro.</p>
+        <div class="field"><label>Nombre completo</label><input id="ob-nombre"></div>
+        <div class="grid2">
+          <div class="field"><label>Teléfono</label><input id="ob-telefono" inputmode="tel"></div>
+          <div class="field"><label>Correo</label><input id="ob-correo" type="email"></div>
+        </div>
+        <div class="field"><label>Dirección</label><input id="ob-direccion"></div>
+        <div class="field">
+          <label>Firma digital</label>
+          <div class="sigwrap"><canvas id="ob-sig-canvas"></canvas><span class="sig-hint">Firma aquí con el mouse o el dedo</span></div>
+          <div class="sig-actions">
+            <button class="btn btn-ghost btn-sm" onclick="SignaturePads.ob.clear()">Borrar firma</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="Aux.saveOnboarding()">Guardar y continuar</button>
+      </div>
+    </div>
+
+    <!-- ===== AUXILIAR: PERFIL ===== -->
+    <div class="view" id="view-perfil">
+      <div class="card" style="max-width:640px;">
+        <h3>Mis datos</h3>
+        <div class="grid2">
+          <div class="field"><label>Nombre completo</label><input id="pf-nombre"></div>
+          <div class="field"><label>Cédula</label><input id="pf-cedula" disabled></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Teléfono</label><input id="pf-telefono"></div>
+          <div class="field"><label>Correo</label><input id="pf-correo" type="email"></div>
+        </div>
+        <div class="field"><label>Dirección</label><input id="pf-direccion"></div>
+        <div class="field">
+          <label>Firma digital</label>
+          <div class="sigwrap"><canvas id="pf-sig-canvas"></canvas><span class="sig-hint">Firma aquí con el mouse o el dedo</span></div>
+          <div class="sig-actions">
+            <button class="btn btn-ghost btn-sm" onclick="SignaturePads.pf.clear()">Borrar firma</button>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="Aux.saveProfile()">Guardar cambios</button>
+      </div>
+      <div class="card" style="max-width:640px;">
+        <h3>Cambiar contraseña</h3>
+        <div class="grid3">
+          <div class="field"><label>Actual</label><input id="pf-pin-old" maxlength="4" inputmode="numeric"></div>
+          <div class="field"><label>Nueva</label><input id="pf-pin-new" maxlength="4" inputmode="numeric"></div>
+          <div class="field"><label>Confirmar</label><input id="pf-pin-new2" maxlength="4" inputmode="numeric"></div>
+        </div>
+        <button class="btn btn-navy" onclick="Aux.changePin()">Actualizar contraseña</button>
+      </div>
+    </div>
+
+    <!-- ===== AUXILIAR: DÍAS LABORADOS ===== -->
+    <div class="view" id="view-dias">
+      <div style="margin-bottom:16px;"><button class="btn btn-primary" onclick="Aux.openRegistroForm()">+ Nuevo día laborado</button></div>
+      <div id="dias-list"></div>
+    </div>
+
+    <!-- ===== AUXILIAR: REPORTES ===== -->
+    <div class="view" id="view-reportes-aux">
+      <div class="card" style="max-width:560px;">
+        <h3>Generar cuenta de cobro</h3>
+        <div class="grid2">
+          <div class="field"><label>Desde</label><input type="date" id="rep-desde"></div>
+          <div class="field"><label>Hasta</label><input type="date" id="rep-hasta"></div>
+        </div>
+        <button class="btn btn-primary" onclick="Reportes.generarAuxiliar()">Generar reporte en PDF</button>
+      </div>
+    </div>
+
+    <!-- ===== ADMIN: CATALOGOS ===== -->
+    <div class="view" id="view-catalogos">
+      <div class="grid2">
+        <div class="card">
+          <h3>Placas</h3>
+          <ul class="catalog-list" id="cat-placas"></ul>
+          <div class="inline-add"><input id="new-placa" placeholder="Ej. QJY090"><button class="btn btn-navy btn-sm" onclick="Catalogos.add('placas','placa','new-placa')">Agregar</button></div>
+        </div>
+        <div class="card">
+          <h3>Conductores</h3>
+          <ul class="catalog-list" id="cat-conductores"></ul>
+          <div class="inline-add"><input id="new-conductor" placeholder="Nombre del conductor"><input id="new-conductor-valor" type="number" placeholder="Valor" style="max-width:110px;"><button class="btn btn-navy btn-sm" onclick="Catalogos.addConductor()">Agregar</button></div>
+          <p class="small-note">Los 4 conductores base tienen valor de $66.000; cualquier conductor nuevo queda por defecto en $80.000 (editable).</p>
+        </div>
+        <div class="card">
+          <h3>Tipos de servicio</h3>
+          <ul class="catalog-list" id="cat-servicios"></ul>
+          <div class="inline-add"><input id="new-servicio" placeholder="Ej. Recolección"><button class="btn btn-navy btn-sm" onclick="Catalogos.add('tipos_servicio','nombre','new-servicio')">Agregar</button></div>
+        </div>
+        <div class="card">
+          <h3>Ciudades / poblaciones</h3>
+          <ul class="catalog-list" id="cat-ciudades"></ul>
+          <div class="inline-add"><input id="new-ciudad" placeholder="Ej. Aracataca"><button class="btn btn-navy btn-sm" onclick="Catalogos.add('ciudades','nombre','new-ciudad')">Agregar</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ADMIN: AUXILIARES ===== -->
+    <div class="view" id="view-auxiliares">
+      <div class="card">
+        <h3>Auxiliares registrados</h3>
+        <table class="datatable" id="tabla-auxiliares"><thead><tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+      <div id="auxiliar-detalle"></div>
+    </div>
+
+    <!-- ===== ADMIN: REPORTES ===== -->
+    <div class="view" id="view-reportes-admin">
+      <div class="card" style="max-width:600px;">
+        <h3>Generar cuenta de cobro por auxiliar</h3>
+        <div class="field"><label>Auxiliar</label><select id="admrep-auxiliar"></select></div>
+        <div class="grid2">
+          <div class="field"><label>Desde</label><input type="date" id="admrep-desde"></div>
+          <div class="field"><label>Hasta</label><input type="date" id="admrep-hasta"></div>
+        </div>
+        <button class="btn btn-primary" onclick="Reportes.generarAdmin()">Generar reporte en PDF</button>
+      </div>
+    </div>
+
+    <!-- ===== ADMIN: CONFIGURACION ===== -->
+    <div class="view" id="view-config">
+      <div class="card" style="max-width:560px;">
+        <h3>Cambiar clave de administrador</h3>
+        <div class="grid3">
+          <div class="field"><label>Actual</label><input id="cf-pass-old" type="password"></div>
+          <div class="field"><label>Nueva</label><input id="cf-pass-new" type="password"></div>
+          <div class="field"><label>Confirmar</label><input id="cf-pass-new2" type="password"></div>
+        </div>
+        <button class="btn btn-navy" onclick="AdminMod.changePassword()">Actualizar clave</button>
+      </div>
+      <div class="card" style="max-width:560px;">
+        <h3>Plantilla de columnas para la cuenta de cobro</h3>
+        <p class="small-note" style="margin-top:-6px;">Columnas actuales: <span id="cols-actuales" class="mono"></span></p>
+        <input type="file" id="plantilla-file" accept=".xlsx,.xls">
+        <div style="margin-top:10px;display:flex;gap:8px;">
+          <button class="btn btn-navy btn-sm" onclick="AdminMod.cargarPlantilla()">Cargar plantilla Excel</button>
+          <button class="btn btn-ghost btn-sm" onclick="AdminMod.resetPlantilla()">Restablecer por defecto</button>
+        </div>
+        <p class="small-note">El sistema toma la fila de encabezados de tu Excel (la que contiene "FECHA") para definir las columnas de la tabla en el PDF de la cuenta de cobro.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== MODAL GENERICO ===================== -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+
+<div id="toast"></div>
+<div id="print-root"></div>
+
+<script>
+/* ============================================================
+   CONFIGURACIÓN SUPABASE
+   ============================================================ */
+const SUPABASE_URL = "https://phomutbqbyxeotidwbyy.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBob211dGJxYnl4ZW90aWR3Ynl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMzczMTUsImV4cCI6MjEwMzYxMzMxNX0.mnpgXygyDqcay8paXGCoCoLtCeqq8lkzpo7uoq8Kvbg";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ============================================================
+   ESTADO GLOBAL
+   ============================================================ */
+const State = {
+  session: null,           // {tipo:'auxiliar'|'admin', auxiliar:{...}}
+  catalogos: { placas:[], conductores:[], tipos_servicio:[], ciudades:[] },
+  adminConfig: { password:'1234', columnas_reporte:['FECHA','PLACA','ACTIVIDAD','VALOR'] },
+  registrosCache: [],
+  auxiliaresCache: [],
+  editRegistroId: null,
+  productosEstampillado: [],
+  auxDetalleAbierto: null
+};
+
+/* ============================================================
+   UTILIDADES
+   ============================================================ */
+function money(n){
+  n = Number(n)||0;
+  return '$ ' + n.toLocaleString('es-CO', {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+function rand4(){ return String(Math.floor(1000+Math.random()*9000)); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function fmtDate(d){
+  if(!d) return '';
+  const [y,m,day]=d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function toast(msg, type){
+  const el=document.createElement('div');
+  el.className='toast-msg'+(type?(' '+type):'');
+  el.textContent=msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(()=>el.remove(), 4200);
+}
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function openModal(html){
+  document.getElementById('modal-box').innerHTML = `<button class="modal-close" onclick="closeModal()">&times;</button>${html}`;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('show');
+  document.getElementById('modal-box').innerHTML='';
+}
+document.getElementById('modal-overlay').addEventListener('click', e=>{
+  if(e.target.id==='modal-overlay') closeModal();
+});
+
+/* ============================================================
+   FIRMA DIGITAL (canvas)
+   ============================================================ */
+class SigPad{
+  constructor(canvas){
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.drawing = false;
+    this.hasInk = false;
+    this._resize();
+    window.addEventListener('resize', ()=>this._resize());
+    const start = e=>{ this.drawing=true; this._point(e); };
+    const move = e=>{ if(this.drawing){ this._line(e); e.preventDefault(); } };
+    const end = ()=>{ this.drawing=false; this.ctx.beginPath(); };
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, {passive:false});
+    canvas.addEventListener('touchmove', move, {passive:false});
+    canvas.addEventListener('touchend', end);
+  }
+  _resize(){
+    const rect = this.canvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio||1;
+    this.canvas.width = rect.width*ratio;
+    this.canvas.height = rect.height*ratio;
+    this.ctx.scale(ratio,ratio);
+    this.ctx.lineWidth=2.2; this.ctx.lineCap='round'; this.ctx.strokeStyle='#12283f';
+  }
+  _pos(e){
+    const rect=this.canvas.getBoundingClientRect();
+    const p = e.touches? e.touches[0]:e;
+    return {x:p.clientX-rect.left, y:p.clientY-rect.top};
+  }
+  _point(e){ const p=this._pos(e); this.ctx.beginPath(); this.ctx.moveTo(p.x,p.y); this.hasInk=true; }
+  _line(e){ const p=this._pos(e); this.ctx.lineTo(p.x,p.y); this.ctx.stroke(); this.hasInk=true; }
+  clear(){ this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height); this.hasInk=false; }
+  toDataURL(){ return this.hasInk ? this.canvas.toDataURL('image/png') : ''; }
+  loadFromDataURL(url){
+    if(!url) return;
+    const img = new Image();
+    img.onload = ()=>{ this.ctx.drawImage(img,0,0,this.canvas.getBoundingClientRect().width, this.canvas.getBoundingClientRect().height); this.hasInk=true; };
+    img.src = url;
+  }
+}
+const SignaturePads = {};
+
+/* ============================================================
+   UI: navegación
+   ============================================================ */
+const UI = {
+  setLoginMode(mode){
+    document.getElementById('seg-aux').classList.toggle('active', mode==='aux');
+    document.getElementById('seg-admin').classList.toggle('active', mode==='admin');
+    document.getElementById('pane-aux').classList.toggle('hidden', mode!=='aux');
+    document.getElementById('pane-admin').classList.toggle('hidden', mode!=='admin');
+  },
+  setAuxSub(sub){
+    document.getElementById('sub-ingresar').classList.toggle('active', sub==='in');
+    document.getElementById('sub-registrar').classList.toggle('active', sub==='reg');
+    document.getElementById('aux-in').classList.toggle('hidden', sub!=='in');
+    document.getElementById('aux-reg').classList.toggle('hidden', sub!=='reg');
+  },
+  openForgot(){
+    openModal(`
+      <h3>Recuperar contraseña</h3>
+      <div class="field"><label>Cédula</label><input id="forgot-cedula" inputmode="numeric"></div>
+      <button class="btn btn-primary" onclick="Auth.forgotPassword()">Consultar</button>
+      <div id="forgot-result" style="margin-top:14px;"></div>
+    `);
+  },
+  showApp(view){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app-screen').classList.add('show');
+    UI.buildNav();
+    UI.goTo(view);
+  },
+  buildNav(){
+    const nav = document.getElementById('nav-group');
+    if(State.session.tipo==='auxiliar'){
+      nav.innerHTML = `
+        <button class="nav-item" data-v="perfil" onclick="UI.goTo('perfil')">Perfil</button>
+        <button class="nav-item" data-v="dias" onclick="UI.goTo('dias')">Días laborados</button>
+        <button class="nav-item" data-v="reportes-aux" onclick="UI.goTo('reportes-aux')">Reportes</button>
+      `;
+      document.getElementById('side-nombre').textContent = State.session.auxiliar.nombre_completo || 'Sin nombre';
+      document.getElementById('side-detalle').textContent = 'CC ' + State.session.auxiliar.cedula;
+    } else {
+      nav.innerHTML = `
+        <button class="nav-item" data-v="catalogos" onclick="UI.goTo('catalogos')">Catálogos</button>
+        <button class="nav-item" data-v="auxiliares" onclick="UI.goTo('auxiliares')">Auxiliares</button>
+        <button class="nav-item" data-v="reportes-admin" onclick="UI.goTo('reportes-admin')">Reportes</button>
+        <button class="nav-item" data-v="config" onclick="UI.goTo('config')">Configuración</button>
+      `;
+      document.getElementById('side-nombre').textContent = 'Administrador';
+      document.getElementById('side-detalle').textContent = 'Panel de control';
+    }
+  },
+  goTo(view){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.v===view));
+    const titles = {
+      onboarding:['Completa tu perfil',''],
+      perfil:['Mi perfil','Tus datos personales y firma digital'],
+      dias:['Días laborados','Registra cada servicio prestado en ruta'],
+      'reportes-aux':['Reportes','Genera tu cuenta de cobro en PDF'],
+      catalogos:['Catálogos','Placas, conductores, tipos de servicio y ciudades'],
+      auxiliares:['Auxiliares','Perfiles, registros y descuentos'],
+      'reportes-admin':['Reportes','Genera la cuenta de cobro de cualquier auxiliar'],
+      config:['Configuración','Clave de acceso y plantilla de reporte']
+    };
+    document.getElementById('view-'+view).classList.add('active');
+    document.getElementById('view-title').textContent = (titles[view]||['',''])[0];
+    document.getElementById('view-sub').textContent = (titles[view]||['',''])[1];
+    if(view==='dias') Aux.renderDias();
+    if(view==='perfil') Aux.fillProfileForm();
+    if(view==='catalogos') Catalogos.renderAll();
+    if(view==='auxiliares') AdminMod.renderAuxiliares();
+    if(view==='reportes-admin') AdminMod.fillAuxSelect();
+    if(view==='config') AdminMod.fillConfig();
+  }
+};
+
+/* ============================================================
+   AUTENTICACIÓN
+   ============================================================ */
+const Auth = {
+  async registerAuxiliar(){
+    const cedula = document.getElementById('reg-cedula').value.trim();
+    if(!cedula){ toast('Ingresa tu número de cédula','err'); return; }
+    const { data: existing } = await sb.from('auxiliares').select('id').eq('cedula', cedula).maybeSingle();
+    if(existing){ toast('Esa cédula ya está registrada. Inicia sesión.','err'); return; }
+    const pin = rand4();
+    const { data, error } = await sb.from('auxiliares').insert({ cedula, password: pin }).select().single();
+    if(error){ toast('No se pudo crear la cuenta: '+error.message,'err'); return; }
+    openModal(`
+      <h3>Cuenta creada</h3>
+      <p>Tu contraseña de 4 dígitos es:</p>
+      <div class="mono" style="font-size:28px;font-weight:700;letter-spacing:6px;background:#eee8d8;padding:14px;border-radius:8px;text-align:center;">${pin}</div>
+      <p class="small-note">Guárdala bien, la necesitarás para ingresar. Podrás cambiarla luego desde tu perfil.</p>
+      <button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="closeModal(); Auth._enterAsAuxiliar(${JSON.stringify(data).replace(/"/g,'&quot;')})">Continuar</button>
+    `);
+  },
+  async loginAuxiliar(){
+    const cedula = document.getElementById('in-cedula').value.trim();
+    const pin = document.getElementById('in-pin').value.trim();
+    if(!cedula || !pin){ toast('Completa cédula y contraseña','err'); return; }
+    const { data, error } = await sb.from('auxiliares').select('*').eq('cedula', cedula).maybeSingle();
+    if(error || !data){ toast('Cédula no encontrada','err'); return; }
+    if(String(data.password)!==pin){ toast('Contraseña incorrecta','err'); return; }
+    Auth._enterAsAuxiliar(data);
+  },
+  _enterAsAuxiliar(data){
+    State.session = { tipo:'auxiliar', auxiliar:data };
+    localStorage.setItem('cc_session', JSON.stringify({tipo:'auxiliar', id:data.id}));
+    Bootstrap.afterLogin();
+  },
+  async forgotPassword(){
+    const cedula = document.getElementById('forgot-cedula').value.trim();
+    const box = document.getElementById('forgot-result');
+    const { data } = await sb.from('auxiliares').select('password').eq('cedula', cedula).maybeSingle();
+    if(!data){ box.innerHTML = `<p style="color:var(--danger);">No se encontró un auxiliar con esa cédula.</p>`; return; }
+    box.innerHTML = `<p>Tu contraseña actual es:</p><div class="mono" style="font-size:24px;font-weight:700;letter-spacing:5px;background:#eee8d8;padding:12px;border-radius:8px;text-align:center;">${data.password}</div>`;
+  },
+  async loginAdmin(){
+    const pass = document.getElementById('admin-pass').value.trim();
+    await AdminMod.loadConfig();
+    if(pass !== String(State.adminConfig.password)){ toast('Clave incorrecta','err'); return; }
+    State.session = { tipo:'admin' };
+    localStorage.setItem('cc_session', JSON.stringify({tipo:'admin'}));
+    Bootstrap.afterLogin();
+  },
+  logout(){
+    State.session = null;
+    localStorage.removeItem('cc_session');
+    document.getElementById('app-screen').classList.remove('show');
+    document.getElementById('login-screen').style.display='flex';
+  }
+};
+
+/* ============================================================
+   ARRANQUE / BOOTSTRAP
+   ============================================================ */
+const Bootstrap = {
+  async afterLogin(){
+    await Catalogos.loadAll();
+    await AdminMod.loadConfig();
+    if(State.session.tipo==='auxiliar'){
+      const aux = State.session.auxiliar;
+      if(!aux.nombre_completo){
+        UI.showApp('onboarding');
+        setTimeout(()=>{
+          SignaturePads.ob = new SigPad(document.getElementById('ob-sig-canvas'));
+        }, 30);
+      } else {
+        UI.showApp('dias');
+        setTimeout(()=>{ SignaturePads.pf = new SigPad(document.getElementById('pf-sig-canvas')); Aux.fillProfileForm(); }, 30);
+      }
+    } else {
+      UI.showApp('catalogos');
+    }
+  },
+  async tryRestore(){
+    const raw = localStorage.getItem('cc_session');
+    if(!raw) return;
+    try{
+      const s = JSON.parse(raw);
+      if(s.tipo==='admin'){ State.session={tipo:'admin'}; await Bootstrap.afterLogin(); }
+      else if(s.tipo==='auxiliar' && s.id){
+        const { data } = await sb.from('auxiliares').select('*').eq('id', s.id).maybeSingle();
+        if(data){ State.session={tipo:'auxiliar', auxiliar:data}; await Bootstrap.afterLogin(); }
+      }
+    }catch(e){}
+  }
+};
+
+/* ============================================================
+   CATALOGOS (placas, conductores, tipos_servicio, ciudades)
+   ============================================================ */
+const Catalogos = {
+  async loadAll(){
+    const [p,c,t,ci] = await Promise.all([
+      sb.from('placas').select('*').order('placa'),
+      sb.from('conductores').select('*').order('nombre'),
+      sb.from('tipos_servicio').select('*').order('nombre'),
+      sb.from('ciudades').select('*').order('nombre')
+    ]);
+    State.catalogos.placas = p.data||[];
+    State.catalogos.conductores = c.data||[];
+    State.catalogos.tipos_servicio = t.data||[];
+    State.catalogos.ciudades = ci.data||[];
+  },
+  async add(table, field, inputId){
+    const input = document.getElementById(inputId);
+    const value = input.value.trim();
+    if(!value){ toast('Escribe un valor','err'); return; }
+    const payload = {}; payload[field]=value;
+    const { error } = await sb.from(table).insert(payload);
+    if(error){ toast('No se pudo agregar (¿ya existe?)','err'); return; }
+    input.value='';
+    await Catalogos.loadAll();
+    Catalogos.renderAll();
+    toast('Agregado correctamente','ok');
+  },
+  async addConductor(){
+    const nombre = document.getElementById('new-conductor').value.trim();
+    const valorEl = document.getElementById('new-conductor-valor');
+    const valor = valorEl.value ? Number(valorEl.value) : 80000;
+    if(!nombre){ toast('Escribe el nombre del conductor','err'); return; }
+    const { error } = await sb.from('conductores').insert({ nombre, valor_dia: valor });
+    if(error){ toast('No se pudo agregar (¿ya existe?)','err'); return; }
+    document.getElementById('new-conductor').value='';
+    valorEl.value='';
+    await Catalogos.loadAll();
+    Catalogos.renderAll();
+    toast('Conductor agregado','ok');
+  },
+  async remove(table, id){
+    if(!confirm('¿Eliminar este elemento del catálogo?')) return;
+    const { error } = await sb.from(table).delete().eq('id', id);
+    if(error){ toast('No se pudo eliminar','err'); return; }
+    await Catalogos.loadAll();
+    Catalogos.renderAll();
+  },
+  async updateConductorValor(id, valor){
+    await sb.from('conductores').update({ valor_dia: Number(valor)||0 }).eq('id', id);
+    await Catalogos.loadAll();
+    toast('Valor actualizado','ok');
+  },
+  renderAll(){
+    const mk = (arr, table, withVal) => arr.map(it=>`
+      <li>
+        <span>
+          <span class="cl-name">${esc(it.placa||it.nombre)}</span>
+          ${withVal?`<input type="number" value="${it.valor_dia}" class="mono" style="width:90px;margin-left:8px;padding:3px 6px;border:1px solid var(--line-strong);border-radius:5px;" onchange="Catalogos.updateConductorValor('${it.id}', this.value)">`:''}
+        </span>
+        <button class="btn btn-danger btn-sm" onclick="Catalogos.remove('${table}','${it.id}')">Eliminar</button>
+      </li>`).join('') || '<li class="empty-state" style="border:none;">Sin registros</li>';
+    document.getElementById('cat-placas').innerHTML = mk(State.catalogos.placas,'placas',false);
+    document.getElementById('cat-conductores').innerHTML = mk(State.catalogos.conductores,'conductores',true);
+    document.getElementById('cat-servicios').innerHTML = mk(State.catalogos.tipos_servicio,'tipos_servicio',false);
+    document.getElementById('cat-ciudades').innerHTML = mk(State.catalogos.ciudades,'ciudades',false);
+  }
+};
+
+/* ============================================================
+   AUXILIAR: perfil / onboarding
+   ============================================================ */
+const Aux = {
+  async saveOnboarding(){
+    const nombre = document.getElementById('ob-nombre').value.trim();
+    const telefono = document.getElementById('ob-telefono').value.trim();
+    const correo = document.getElementById('ob-correo').value.trim();
+    const direccion = document.getElementById('ob-direccion').value.trim();
+    if(!nombre || !direccion){ toast('Completa al menos nombre y dirección','err'); return; }
+    const firma = SignaturePads.ob ? SignaturePads.ob.toDataURL() : '';
+    const payload = { nombre_completo:nombre, telefono, correo, direccion, firma_digital:firma };
+    const { data, error } = await sb.from('auxiliares').update(payload).eq('id', State.session.auxiliar.id).select().single();
+    if(error){ toast('No se pudo guardar el perfil','err'); return; }
+    State.session.auxiliar = data;
+    toast('Perfil guardado','ok');
+    UI.showApp('dias');
+    setTimeout(()=>{ SignaturePads.pf = new SigPad(document.getElementById('pf-sig-canvas')); Aux.fillProfileForm(); }, 30);
+  },
+  fillProfileForm(){
+    const a = State.session.auxiliar;
+    document.getElementById('pf-nombre').value = a.nombre_completo||'';
+    document.getElementById('pf-cedula').value = a.cedula||'';
+    document.getElementById('pf-telefono').value = a.telefono||'';
+    document.getElementById('pf-correo').value = a.correo||'';
+    document.getElementById('pf-direccion').value = a.direccion||'';
+    if(SignaturePads.pf && a.firma_digital) setTimeout(()=>SignaturePads.pf.loadFromDataURL(a.firma_digital), 50);
+  },
+  async saveProfile(){
+    const payload = {
+      nombre_completo: document.getElementById('pf-nombre').value.trim(),
+      telefono: document.getElementById('pf-telefono').value.trim(),
+      correo: document.getElementById('pf-correo').value.trim(),
+      direccion: document.getElementById('pf-direccion').value.trim()
+    };
+    const newSig = SignaturePads.pf ? SignaturePads.pf.toDataURL() : '';
+    if(newSig) payload.firma_digital = newSig;
+    const { data, error } = await sb.from('auxiliares').update(payload).eq('id', State.session.auxiliar.id).select().single();
+    if(error){ toast('No se pudo guardar','err'); return; }
+    State.session.auxiliar = data;
+    UI.buildNav();
+    toast('Perfil actualizado','ok');
+  },
+  async changePin(){
+    const old = document.getElementById('pf-pin-old').value.trim();
+    const n1 = document.getElementById('pf-pin-new').value.trim();
+    const n2 = document.getElementById('pf-pin-new2').value.trim();
+    if(String(State.session.auxiliar.password)!==old){ toast('La contraseña actual no coincide','err'); return; }
+    if(!/^\d{4}$/.test(n1)){ toast('La nueva contraseña debe tener 4 dígitos','err'); return; }
+    if(n1!==n2){ toast('Las contraseñas nuevas no coinciden','err'); return; }
+    const { data, error } = await sb.from('auxiliares').update({password:n1}).eq('id', State.session.auxiliar.id).select().single();
+    if(error){ toast('No se pudo actualizar','err'); return; }
+    State.session.auxiliar = data;
+    document.getElementById('pf-pin-old').value='';
+    document.getElementById('pf-pin-new').value='';
+    document.getElementById('pf-pin-new2').value='';
+    toast('Contraseña actualizada','ok');
+  },
+
+  /* ---- días laborados ---- */
+  async renderDias(){
+    const { data } = await sb.from('registros').select('*').eq('auxiliar_id', State.session.auxiliar.id).order('fecha', {ascending:false});
+    State.registrosCache = data||[];
+    const list = document.getElementById('dias-list');
+    if(!State.registrosCache.length){ list.innerHTML = '<div class="empty-state">Aún no has registrado días laborados.</div>'; return; }
+    list.innerHTML = State.registrosCache.map(r=>Aux._ticketHTML(r,true)).join('');
+  },
+  _ticketHTML(r, editable){
+    const desc = r.es_descuento ? `Descuento: ${r.actividad}` : `${esc(r.actividad)}`;
+    return `
+    <div class="ticket ${r.es_descuento?'discount':''}">
+      <span class="platebadge">${esc(r.placa||'-')}</span>
+      <div class="tk-main">
+        <div class="tk-date">${fmtDate(r.fecha)} ${r.conductor && r.conductor!=='-' ? '· '+esc(r.conductor):''}</div>
+        <div class="tk-desc">${desc}${r.ciudad?(' · '+esc(r.ciudad)):''}</div>
+      </div>
+      <div class="tk-val">${money(r.valor)}</div>
+      ${editable?`<div class="ticket-actions">
+        <button class="btn btn-ghost btn-sm" onclick="Aux.openRegistroForm('${r.id}')">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="Aux.deleteRegistro('${r.id}')">Eliminar</button>
+      </div>`:''}
+    </div>`;
+  },
+  async deleteRegistro(id){
+    if(!confirm('¿Eliminar este registro?')) return;
+    await sb.from('registros').delete().eq('id', id);
+    Aux.renderDias();
+    toast('Registro eliminado','ok');
+  },
+  openRegistroForm(id){
+    State.editRegistroId = id||null;
+    const editing = id ? State.registrosCache.find(r=>r.id===id) : null;
+    State.productosEstampillado = (editing && editing.productos) ? JSON.parse(JSON.stringify(editing.productos)) : [];
+
+    const opts = (arr, field, current) => arr.map(o=>`<option value="${esc(o[field])}" ${current===o[field]?'selected':''}>${esc(o[field])}</option>`).join('') + `<option value="__nuevo__">+ Agregar nueva opción…</option>`;
+
+    openModal(`
+      <h3>${editing?'Editar':'Nuevo'} día laborado</h3>
+      <div class="grid2">
+        <div class="field"><label>Fecha</label><input type="date" id="rf-fecha" value="${editing?editing.fecha:todayISO()}"></div>
+        <div class="field"><label>Placa</label>
+          <select id="rf-placa" onchange="Aux._maybeInlineAdd('placa')">${opts(State.catalogos.placas,'placa', editing?editing.placa:null)}</select>
+          <div class="inline-add hidden" id="add-placa-wrap"><input id="add-placa-input" placeholder="Nueva placa"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSave('placas','placa','add-placa-input','rf-placa')">Guardar</button></div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Conductor</label>
+          <select id="rf-conductor" onchange="Aux._maybeInlineAdd('conductor'); Aux._recalcValor();">${opts(State.catalogos.conductores,'nombre', editing?editing.conductor:null)}</select>
+          <div class="inline-add hidden" id="add-conductor-wrap"><input id="add-conductor-input" placeholder="Nuevo conductor"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSaveConductor()">Guardar</button></div>
+        </div>
+        <div class="field"><label>Valor del día</label><input id="rf-valor" class="mono" value="${editing?editing.valor:''}" disabled></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Tipo de servicio</label>
+          <select id="rf-tiposervicio" onchange="Aux._maybeInlineAdd('tiposervicio')">${opts(State.catalogos.tipos_servicio,'nombre', editing?editing.tipo_servicio:null)}</select>
+          <div class="inline-add hidden" id="add-tiposervicio-wrap"><input id="add-tiposervicio-input" placeholder="Nuevo tipo de servicio"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSave('tipos_servicio','nombre','add-tiposervicio-input','rf-tiposervicio')">Guardar</button></div>
+        </div>
+        <div class="field"><label>Concepto</label>
+          <select id="rf-concepto" onchange="Aux._toggleEstampillado()">
+            <option value="Entregas TAT" ${editing&&editing.concepto==='Entregas TAT'?'selected':''}>Entregas TAT</option>
+            <option value="Estampillado" ${editing&&editing.concepto==='Estampillado'?'selected':''}>Estampillado</option>
+          </select>
+        </div>
+      </div>
+      <div id="estampillado-block" class="hidden">
+        <label style="display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;">Productos estampillados</label>
+        <div id="productos-rows"></div>
+        <button class="btn btn-ghost btn-sm" onclick="Aux._addProductoRow()">+ Agregar producto</button>
+      </div>
+      <div class="field" style="margin-top:14px;"><label>Ciudad / población de entrega</label>
+        <select id="rf-ciudad" onchange="Aux._maybeInlineAdd('ciudad')">${opts(State.catalogos.ciudades,'nombre', editing?editing.ciudad:null)}</select>
+        <div class="inline-add hidden" id="add-ciudad-wrap"><input id="add-ciudad-input" placeholder="Nueva ciudad/población"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSave('ciudades','nombre','add-ciudad-input','rf-ciudad')">Guardar</button></div>
+      </div>
+      <div class="field">
+        <label>Firma digital del reporte del día</label>
+        <div class="sigwrap"><canvas id="rf-sig-canvas"></canvas><span class="sig-hint">Firma aquí</span></div>
+        <div class="sig-actions"><button class="btn btn-ghost btn-sm" onclick="SignaturePads.rf.clear()">Borrar firma</button></div>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:6px;" onclick="Aux.saveRegistro()">Guardar registro</button>
+    `);
+    setTimeout(()=>{
+      SignaturePads.rf = new SigPad(document.getElementById('rf-sig-canvas'));
+      if(editing && editing.firma) SignaturePads.rf.loadFromDataURL(editing.firma);
+      if(editing && editing.concepto==='Estampillado') document.getElementById('estampillado-block').classList.remove('hidden');
+      Aux._renderProductoRows();
+      if(!editing) Aux._recalcValor();
+    }, 30);
+  },
+  _maybeInlineAdd(key){
+    const sel = document.getElementById('rf-'+key);
+    document.getElementById('add-'+key+'-wrap').classList.toggle('hidden', sel.value!=='__nuevo__');
+  },
+  async _inlineSave(table, field, inputId, selectId){
+    const val = document.getElementById(inputId).value.trim();
+    if(!val){ toast('Escribe un valor','err'); return; }
+    const payload={}; payload[field]=val;
+    const { error } = await sb.from(table).insert(payload);
+    if(error){ toast('No se pudo agregar','err'); return; }
+    await Catalogos.loadAll();
+    const sel = document.getElementById(selectId);
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = val;
+    sel.insertBefore(opt, sel.lastElementChild);
+    sel.value = val;
+    document.getElementById(inputId.replace('-input','-wrap')).classList.add('hidden');
+    toast('Agregado','ok');
+    if(selectId==='rf-conductor') Aux._recalcValor();
+  },
+  async _inlineSaveConductor(){
+    const val = document.getElementById('add-conductor-input').value.trim();
+    if(!val){ toast('Escribe un nombre','err'); return; }
+    const { error } = await sb.from('conductores').insert({nombre:val, valor_dia:80000});
+    if(error){ toast('No se pudo agregar','err'); return; }
+    await Catalogos.loadAll();
+    const sel = document.getElementById('rf-conductor');
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = val;
+    sel.insertBefore(opt, sel.lastElementChild);
+    sel.value = val;
+    document.getElementById('add-conductor-wrap').classList.add('hidden');
+    Aux._recalcValor();
+    toast('Conductor agregado (valor $80.000)','ok');
+  },
+  _recalcValor(){
+    const nombre = document.getElementById('rf-conductor').value;
+    const found = State.catalogos.conductores.find(c=>c.nombre===nombre);
+    const valor = found ? found.valor_dia : 80000;
+    document.getElementById('rf-valor').value = valor;
+  },
+  _toggleEstampillado(){
+    const on = document.getElementById('rf-concepto').value==='Estampillado';
+    document.getElementById('estampillado-block').classList.toggle('hidden', !on);
+    if(on && !State.productosEstampillado.length){ State.productosEstampillado=[{referencia:'',cantidad:1}]; Aux._renderProductoRows(); }
+  },
+  _addProductoRow(){
+    State.productosEstampillado.push({referencia:'',cantidad:1});
+    Aux._renderProductoRows();
+  },
+  _renderProductoRows(){
+    const wrap = document.getElementById('productos-rows');
+    if(!wrap) return;
+    wrap.innerHTML = State.productosEstampillado.map((p,i)=>`
+      <div class="product-row">
+        <input placeholder="Referencia / producto" value="${esc(p.referencia)}" oninput="State.productosEstampillado[${i}].referencia=this.value">
+        <input type="number" min="1" placeholder="Cant." value="${p.cantidad}" oninput="State.productosEstampillado[${i}].cantidad=this.value">
+        <button class="btn btn-danger btn-sm" onclick="Aux._removeProductoRow(${i})">✕</button>
+      </div>`).join('');
+  },
+  _removeProductoRow(i){
+    State.productosEstampillado.splice(i,1);
+    Aux._renderProductoRows();
+  },
+  async saveRegistro(){
+    const fecha = document.getElementById('rf-fecha').value;
+    const placa = document.getElementById('rf-placa').value;
+    const conductor = document.getElementById('rf-conductor').value;
+    const valor = Number(document.getElementById('rf-valor').value)||0;
+    const tipo_servicio = document.getElementById('rf-tiposervicio').value;
+    const concepto = document.getElementById('rf-concepto').value;
+    const ciudad = document.getElementById('rf-ciudad').value;
+    if([placa,conductor,tipo_servicio,ciudad].includes('__nuevo__')){ toast('Guarda las opciones nuevas antes de continuar','err'); return; }
+    if(!fecha || !placa || !conductor || !ciudad){ toast('Completa todos los campos','err'); return; }
+    let productos = [];
+    if(concepto==='Estampillado'){
+      productos = State.productosEstampillado.filter(p=>p.referencia);
+      if(!productos.length){ toast('Agrega al menos un producto estampillado','err'); return; }
+    }
+    const firma = SignaturePads.rf ? SignaturePads.rf.toDataURL() : '';
+    let actividad = `${tipo_servicio} - ${concepto}`;
+    if(concepto==='Estampillado'){
+      actividad += ' (' + productos.map(p=>`${p.referencia} x${p.cantidad}`).join(', ') + ')';
+    }
+    actividad += ` - ${ciudad}`;
+
+    const payload = { auxiliar_id: State.session.auxiliar.id, fecha, placa, conductor, valor, tipo_servicio, concepto, productos, ciudad, actividad, firma, es_descuento:false, creado_por:'auxiliar' };
+
+    let error;
+    if(State.editRegistroId){
+      ({ error } = await sb.from('registros').update(payload).eq('id', State.editRegistroId));
+    } else {
+      ({ error } = await sb.from('registros').insert(payload));
+    }
+    if(error){ toast('No se pudo guardar el registro','err'); return; }
+    closeModal();
+    Aux.renderDias();
+    toast('Registro guardado','ok');
+  }
+};
+
+/* ============================================================
+   GENERACIÓN DE PDF — CUENTA DE COBRO
+   ============================================================ */
+const Reportes = {
+  async _fetchRegistros(auxiliarId, desde, hasta){
+    let q = sb.from('registros').select('*').eq('auxiliar_id', auxiliarId).order('fecha',{ascending:true});
+    if(desde) q = q.gte('fecha', desde);
+    if(hasta) q = q.lte('fecha', hasta);
+    const { data } = await q;
+    return data||[];
+  },
+  _columnas(){
+    return (State.adminConfig.columnas_reporte && State.adminConfig.columnas_reporte.length) ? State.adminConfig.columnas_reporte : ['FECHA','PLACA','ACTIVIDAD','VALOR'];
+  },
+  _valorPorColumna(col, r){
+    const c = col.toUpperCase();
+    if(c.includes('FECHA')) return fmtDate(r.fecha);
+    if(c.includes('PLACA')) return r.placa||'-';
+    if(c.includes('ACTIV')) return r.actividad||'';
+    if(c.includes('VALOR')) return money(r.valor);
+    if(c.includes('COND')) return r.conductor||'-';
+    if(c.includes('CIUDAD') || c.includes('POBLA')) return r.ciudad||'-';
+    return '';
+  },
+  buildCuentaCobroHTML(auxiliar, registros, desde, hasta){
+    const columnas = Reportes._columnas();
+    const total = registros.reduce((s,r)=>s+Number(r.valor||0),0);
+    const filas = registros.map(r=>`<tr><td>${columnas.map(c=>Reportes._valorPorColumna(c,r)).join('</td><td>')}</td></tr>`).join('');
+    const poblaciones = [...new Set(registros.map(r=>r.ciudad).filter(Boolean))].join(', ') || '—';
+    const fechaHoy = fmtDate(todayISO());
+    return `
+    <div class="doc-page">
+      <div class="doc-fecha">${fechaHoy}</div>
+      <div class="doc-senores">Señores</div>
+      <div class="doc-empresa">LICONSUMAR DEL MAGDALENA S.A.S</div>
+      <div class="doc-nit">900.988.612-2</div>
+      <div class="doc-ref">Ref. cuenta de cobro</div>
+      <div class="doc-debe">debe a:</div>
+      <div class="doc-concepto"><b>${esc((auxiliar.nombre_completo||'').toUpperCase())}</b>, por concepto de operaciones logísticas en ${esc(poblaciones)} y Santa Marta, correspondiente al periodo del ${fmtDate(desde)||'—'} al ${fmtDate(hasta)||'—'}.</div>
+      <table class="doc-table">
+        <thead><tr>${columnas.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>
+        <tbody>${filas || `<tr><td colspan="${columnas.length}" style="text-align:center;">Sin registros en el periodo</td></tr>`}</tbody>
+        <tfoot><tr class="doc-total-row"><td colspan="${columnas.length-1}">TOTAL DEL CUADRE</td><td>${money(total)}</td></tr></tfoot>
+      </table>
+      <div class="doc-pagar">Total a pagar………………………………………………………( ${money(total)} ) pesos</div>
+      <div>Atentamente,</div>
+      <div class="doc-firma-block">
+        ${auxiliar.firma_digital?`<img class="doc-firma-img" src="${auxiliar.firma_digital}">`:'<div class="doc-line"></div>'}
+        <div><b>${esc(auxiliar.nombre_completo||'')}</b></div>
+        <div>C.C. ${esc(auxiliar.cedula||'')}</div>
+        <div>${esc(auxiliar.direccion||'')}</div>
+        <div>${esc(auxiliar.correo||'')}</div>
+      </div>
+    </div>`;
+  },
+  async _exportNode(html, filename){
+    const root = document.getElementById('print-root');
+    root.innerHTML = html;
+    const node = root.firstElementChild;
+    const canvas = await html2canvas(node, {scale:2, useCORS:true});
+    const img = canvas.toDataURL('image/jpeg', 0.95);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','pt','letter');
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgH = (canvas.height * pageW) / canvas.width;
+    let heightLeft = imgH, position = 0;
+    pdf.addImage(img,'JPEG',0,position,pageW,imgH);
+    heightLeft -= pageH;
+    while(heightLeft > 0){
+      position = heightLeft - imgH;
+      pdf.addPage();
+      pdf.addImage(img,'JPEG',0,position,pageW,imgH);
+      heightLeft -= pageH;
+    }
+    pdf.save(filename);
+    root.innerHTML='';
+  },
+  async generarAuxiliar(){
+    const desde = document.getElementById('rep-desde').value;
+    const hasta = document.getElementById('rep-hasta').value;
+    const aux = State.session.auxiliar;
+    const registros = await Reportes._fetchRegistros(aux.id, desde, hasta);
+    const html = Reportes.buildCuentaCobroHTML(aux, registros, desde, hasta);
+    await Reportes._exportNode(html, `cuenta_de_cobro_${aux.cedula}.pdf`);
+    toast('PDF generado','ok');
+  },
+  async generarAdmin(){
+    const auxId = document.getElementById('admrep-auxiliar').value;
+    if(!auxId){ toast('Selecciona un auxiliar','err'); return; }
+    const desde = document.getElementById('admrep-desde').value;
+    const hasta = document.getElementById('admrep-hasta').value;
+    const aux = State.auxiliaresCache.find(a=>a.id===auxId);
+    const registros = await Reportes._fetchRegistros(auxId, desde, hasta);
+    const html = Reportes.buildCuentaCobroHTML(aux, registros, desde, hasta);
+    await Reportes._exportNode(html, `cuenta_de_cobro_${aux.cedula}.pdf`);
+    toast('PDF generado','ok');
+  }
+};
+
+/* ============================================================
+   ADMIN
+   ============================================================ */
+const AdminMod = {
+  async loadConfig(){
+    let { data } = await sb.from('admin_config').select('*').eq('id',1).maybeSingle();
+    if(!data){
+      const ins = await sb.from('admin_config').insert({id:1, password:'1234', columnas_reporte:['FECHA','PLACA','ACTIVIDAD','VALOR']}).select().single();
+      data = ins.data;
+    }
+    State.adminConfig = data;
+  },
+  async changePassword(){
+    const old = document.getElementById('cf-pass-old').value;
+    const n1 = document.getElementById('cf-pass-new').value;
+    const n2 = document.getElementById('cf-pass-new2').value;
+    if(old !== String(State.adminConfig.password)){ toast('La clave actual no coincide','err'); return; }
+    if(!n1 || n1!==n2){ toast('Las claves nuevas no coinciden','err'); return; }
+    const { data, error } = await sb.from('admin_config').update({password:n1}).eq('id',1).select().single();
+    if(error){ toast('No se pudo actualizar','err'); return; }
+    State.adminConfig = data;
+    document.getElementById('cf-pass-old').value='';
+    document.getElementById('cf-pass-new').value='';
+    document.getElementById('cf-pass-new2').value='';
+    toast('Clave actualizada','ok');
+  },
+  fillConfig(){
+    document.getElementById('cols-actuales').textContent = (State.adminConfig.columnas_reporte||[]).join(' · ');
+  },
+  async cargarPlantilla(){
+    const file = document.getElementById('plantilla-file').files[0];
+    if(!file){ toast('Selecciona un archivo Excel','err'); return; }
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+    let headerRow = rows.find(r => r.some(cell => String(cell||'').toUpperCase().includes('FECHA')));
+    if(!headerRow){ toast('No se encontró una fila de encabezados con "FECHA"','err'); return; }
+    const columnas = headerRow.filter(c => c!==undefined && c!==null && String(c).trim()!=='').map(c=>String(c).trim().toUpperCase());
+    const { data, error } = await sb.from('admin_config').update({columnas_reporte:columnas}).eq('id',1).select().single();
+    if(error){ toast('No se pudo guardar la plantilla','err'); return; }
+    State.adminConfig = data;
+    AdminMod.fillConfig();
+    toast('Plantilla cargada: '+columnas.join(', '),'ok');
+  },
+  async resetPlantilla(){
+    const cols = ['FECHA','PLACA','ACTIVIDAD','VALOR'];
+    const { data } = await sb.from('admin_config').update({columnas_reporte:cols}).eq('id',1).select().single();
+    State.adminConfig = data;
+    AdminMod.fillConfig();
+    toast('Plantilla restablecida','ok');
+  },
+  async renderAuxiliares(){
+    const { data } = await sb.from('auxiliares').select('*').order('created_at',{ascending:false});
+    State.auxiliaresCache = data||[];
+    const tbody = document.querySelector('#tabla-auxiliares tbody');
+    tbody.innerHTML = State.auxiliaresCache.map(a=>`
+      <tr>
+        <td>${esc(a.nombre_completo)||'<span class="small-note">Sin completar</span>'}</td>
+        <td class="mono">${esc(a.cedula)}</td>
+        <td>${esc(a.telefono)||'-'}</td>
+        <td><button class="btn btn-navy btn-sm" onclick="AdminMod.verAuxiliar('${a.id}')">Ver</button></td>
+      </tr>`).join('') || `<tr><td colspan="4" class="empty-state">Sin auxiliares registrados</td></tr>`;
+  },
+  async verAuxiliar(id){
+    State.auxDetalleAbierto = id;
+    const a = State.auxiliaresCache.find(x=>x.id===id);
+    const { data: registros } = await sb.from('registros').select('*').eq('auxiliar_id', id).order('fecha',{ascending:false});
+    const total = (registros||[]).reduce((s,r)=>s+Number(r.valor||0),0);
+    const box = document.getElementById('auxiliar-detalle');
+    box.innerHTML = `
+      <div class="card">
+        <h3>Perfil de ${esc(a.nombre_completo||a.cedula)}</h3>
+        <div class="grid2">
+          <div class="field"><label>Nombre completo</label><input id="da-nombre" value="${esc(a.nombre_completo)}"></div>
+          <div class="field"><label>Cédula</label><input id="da-cedula" value="${esc(a.cedula)}" disabled></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Teléfono</label><input id="da-telefono" value="${esc(a.telefono)}"></div>
+          <div class="field"><label>Correo</label><input id="da-correo" value="${esc(a.correo)}"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Dirección</label><input id="da-direccion" value="${esc(a.direccion)}"></div>
+          <div class="field"><label>Contraseña (4 dígitos)</label><input id="da-pass" value="${esc(a.password)}" class="mono"></div>
+        </div>
+        ${a.firma_digital?`<div class="field"><label>Firma registrada</label><img src="${a.firma_digital}" style="max-width:220px;border:1px solid var(--line);border-radius:6px;background:#fff;"></div>`:''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-navy btn-sm" onclick="AdminMod.guardarPerfilAux('${id}')">Guardar cambios</button>
+          <button class="btn btn-primary btn-sm" onclick="AdminMod.abrirDescuento('${id}')">+ Agregar descuento</button>
+          <button class="btn btn-ghost btn-sm" onclick="AdminMod.pdfAuxiliar('${id}')">Generar PDF del registro</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Registros (${(registros||[]).length}) · Total acumulado: ${money(total)}</h3>
+        <table class="datatable">
+          <thead><tr><th>Fecha</th><th>Placa</th><th>Conductor</th><th>Actividad</th><th>Valor</th><th></th></tr></thead>
+          <tbody>
+            ${(registros||[]).map(r=>`
+              <tr>
+                <td>${fmtDate(r.fecha)}</td>
+                <td>${esc(r.placa)}</td>
+                <td>${esc(r.conductor)}</td>
+                <td>${esc(r.actividad)} ${r.es_descuento?'<span class="pill pill-orange">Descuento</span>':''}</td>
+                <td class="mono">${money(r.valor)}</td>
+                <td><button class="btn btn-danger btn-sm" onclick="AdminMod.eliminarRegistro('${r.id}','${id}')">Eliminar</button></td>
+              </tr>`).join('') || `<tr><td colspan="6" class="empty-state">Sin registros</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    `;
+  },
+  async guardarPerfilAux(id){
+    const payload = {
+      nombre_completo: document.getElementById('da-nombre').value.trim(),
+      telefono: document.getElementById('da-telefono').value.trim(),
+      correo: document.getElementById('da-correo').value.trim(),
+      direccion: document.getElementById('da-direccion').value.trim(),
+      password: document.getElementById('da-pass').value.trim()
+    };
+    const { error } = await sb.from('auxiliares').update(payload).eq('id', id);
+    if(error){ toast('No se pudo guardar','err'); return; }
+    await AdminMod.renderAuxiliares();
+    toast('Perfil actualizado','ok');
+  },
+  async eliminarRegistro(regId, auxId){
+    if(!confirm('¿Eliminar este registro?')) return;
+    await sb.from('registros').delete().eq('id', regId);
+    AdminMod.verAuxiliar(auxId);
+  },
+  abrirDescuento(auxId){
+    openModal(`
+      <h3>Agregar descuento</h3>
+      <div class="field"><label>Fecha</label><input type="date" id="dc-fecha" value="${todayISO()}"></div>
+      <div class="field"><label>Concepto del descuento</label><input id="dc-concepto" placeholder="Ej. Anticipo, daño en producto, etc."></div>
+      <div class="field"><label>Valor a descontar</label><input id="dc-valor" type="number" placeholder="Ej. 20000"></div>
+      <button class="btn btn-danger btn-block" onclick="AdminMod.guardarDescuento('${auxId}')">Aplicar descuento</button>
+    `);
+  },
+  async guardarDescuento(auxId){
+    const fecha = document.getElementById('dc-fecha').value;
+    const concepto = document.getElementById('dc-concepto').value.trim();
+    const valor = Number(document.getElementById('dc-valor').value);
+    if(!concepto || !valor){ toast('Completa concepto y valor','err'); return; }
+    const payload = { auxiliar_id:auxId, fecha, placa:'-', conductor:'-', valor:-Math.abs(valor), tipo_servicio:'Descuento', concepto, productos:[], ciudad:'', actividad:concepto, firma:'', es_descuento:true, creado_por:'admin' };
+    const { error } = await sb.from('registros').insert(payload);
+    if(error){ toast('No se pudo aplicar el descuento','err'); return; }
+    closeModal();
+    AdminMod.verAuxiliar(auxId);
+    toast('Descuento aplicado','ok');
+  },
+  async pdfAuxiliar(auxId){
+    const a = State.auxiliaresCache.find(x=>x.id===auxId);
+    const registros = await Reportes._fetchRegistros(auxId, null, null);
+    const html = Reportes.buildCuentaCobroHTML(a, registros, registros[0]?.fecha, registros[registros.length-1]?.fecha);
+    await Reportes._exportNode(html, `registro_${a.cedula}.pdf`);
+    toast('PDF generado','ok');
+  },
+  fillAuxSelect(){
+    const sel = document.getElementById('admrep-auxiliar');
+    sel.innerHTML = '<option value="">Selecciona…</option>' + State.auxiliaresCache.map(a=>`<option value="${a.id}">${esc(a.nombre_completo||a.cedula)} (CC ${esc(a.cedula)})</option>`).join('');
+    if(!State.auxiliaresCache.length){
+      sb.from('auxiliares').select('*').then(({data})=>{
+        State.auxiliaresCache = data||[];
+        sel.innerHTML = '<option value="">Selecciona…</option>' + State.auxiliaresCache.map(a=>`<option value="${a.id}">${esc(a.nombre_completo||a.cedula)} (CC ${esc(a.cedula)})</option>`).join('');
+      });
+    }
+  }
+};
+
+/* ============================================================
+   INIT
+   ============================================================ */
+Bootstrap.tryRestore();
+</script>
+</body>
+</html>
