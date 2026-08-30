@@ -376,9 +376,10 @@ table.datatable tr:last-child td{border-bottom:none;}
           <p class="small-note">Los 4 conductores base tienen valor de $66.000; cualquier conductor nuevo queda por defecto en $80.000 (editable).</p>
         </div>
         <div class="card">
-          <h3>Tipos de servicio</h3>
+          <h3>Tipos de ruta</h3>
           <ul class="catalog-list" id="cat-servicios"></ul>
           <div class="inline-add"><input id="new-servicio" placeholder="Ej. Recolección"><button class="btn btn-navy btn-sm" onclick="Catalogos.add('tipos_servicio','nombre','new-servicio')">Agregar</button></div>
+          <p class="small-note">Estas opciones aparecen como "Tipo de ruta" cuando el auxiliar registra un día que NO es estampillado.</p>
         </div>
         <div class="card">
           <h3>Ciudades / poblaciones</h3>
@@ -878,9 +879,13 @@ const Aux = {
   openRegistroForm(id){
     State.editRegistroId = id||null;
     const editing = id ? State.registrosCache.find(r=>r.id===id) : null;
-    State.productosEstampillado = (editing && editing.productos) ? JSON.parse(JSON.stringify(editing.productos)) : [];
+    State.productosEstampillado = (editing && editing.productos && editing.productos.length) ? JSON.parse(JSON.stringify(editing.productos)) : [];
+    const conceptoActual = editing ? editing.concepto : 'Ruta';
 
     const opts = (arr, field, current) => arr.map(o=>`<option value="${esc(o[field])}" ${current===o[field]?'selected':''}>${esc(o[field])}</option>`).join('') + `<option value="__nuevo__">+ Agregar nueva opción…</option>`;
+    const conductorOpts = (current) => `<option value="Ninguno" ${current==='Ninguno'||!current?'selected':''}>Ninguno</option>` +
+      State.catalogos.conductores.map(o=>`<option value="${esc(o.nombre)}" ${current===o.nombre?'selected':''}>${esc(o.nombre)}</option>`).join('') +
+      `<option value="__nuevo__">+ Agregar nueva opción…</option>`;
 
     openModal(`
       <h3>${editing?'Editar':'Nuevo'} día laborado</h3>
@@ -891,31 +896,35 @@ const Aux = {
           <div class="inline-add hidden" id="add-placa-wrap"><input id="add-placa-input" placeholder="Nueva placa"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSave('placas','placa','add-placa-input','rf-placa')">Guardar</button></div>
         </div>
       </div>
-      <div class="grid2">
-        <div class="field"><label>Conductor</label>
-          <select id="rf-conductor" onchange="Aux._maybeInlineAdd('conductor'); Aux._recalcValor();">${opts(State.catalogos.conductores,'nombre', editing?editing.conductor:null)}</select>
-          <div class="inline-add hidden" id="add-conductor-wrap"><input id="add-conductor-input" placeholder="Nuevo conductor"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSaveConductor()">Guardar</button></div>
-        </div>
-        <div class="field"><label>Valor del día</label><input id="rf-valor" class="mono" value="${editing?editing.valor:''}" disabled></div>
+      <div class="field"><label>¿Es estampillado o ruta?</label>
+        <select id="rf-concepto" onchange="Aux._onConceptoChange()">
+          <option value="Ruta" ${conceptoActual==='Ruta'?'selected':''}>Ruta</option>
+          <option value="Estampillado" ${conceptoActual==='Estampillado'?'selected':''}>Estampillado</option>
+        </select>
       </div>
-      <div class="grid2">
-        <div class="field"><label>Tipo de servicio</label>
-          <select id="rf-tiposervicio" onchange="Aux._maybeInlineAdd('tiposervicio')">${opts(State.catalogos.tipos_servicio,'nombre', editing?editing.tipo_servicio:null)}</select>
-          <div class="inline-add hidden" id="add-tiposervicio-wrap"><input id="add-tiposervicio-input" placeholder="Nuevo tipo de servicio"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSave('tipos_servicio','nombre','add-tiposervicio-input','rf-tiposervicio')">Guardar</button></div>
-        </div>
-        <div class="field"><label>Concepto</label>
-          <select id="rf-concepto" onchange="Aux._toggleEstampillado()">
-            <option value="Entregas TAT" ${editing&&editing.concepto==='Entregas TAT'?'selected':''}>Entregas TAT</option>
-            <option value="Estampillado" ${editing&&editing.concepto==='Estampillado'?'selected':''}>Estampillado</option>
-          </select>
+
+      <div id="ruta-block">
+        <div class="grid2">
+          <div class="field"><label>Tipo de ruta</label>
+            <select id="rf-tiposervicio" onchange="Aux._maybeInlineAdd('tiposervicio')">${opts(State.catalogos.tipos_servicio,'nombre', editing?editing.tipo_servicio:null)}</select>
+            <div class="inline-add hidden" id="add-tiposervicio-wrap"><input id="add-tiposervicio-input" placeholder="Nuevo tipo de ruta"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSave('tipos_servicio','nombre','add-tiposervicio-input','rf-tiposervicio')">Guardar</button></div>
+          </div>
+          <div class="field"><label>Conductor</label>
+            <select id="rf-conductor" onchange="Aux._maybeInlineAdd('conductor'); Aux._recalcValor();">${conductorOpts(editing?editing.conductor:null)}</select>
+            <div class="inline-add hidden" id="add-conductor-wrap"><input id="add-conductor-input" placeholder="Nuevo conductor"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSaveConductor()">Guardar</button></div>
+          </div>
         </div>
       </div>
+
       <div id="estampillado-block" class="hidden">
-        <label style="display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;">Productos estampillados</label>
+        <label style="display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;">Productos estampillados (valor de la estampilla: $28 c/u)</label>
         <div id="productos-rows"></div>
         <button class="btn btn-ghost btn-sm" onclick="Aux._addProductoRow()">+ Agregar producto</button>
       </div>
-      <div class="field" style="margin-top:14px;"><label>Ciudad / población de entrega</label>
+
+      <div class="field" style="margin-top:14px;"><label>Valor del día</label><input id="rf-valor" class="mono" value="${editing?editing.valor:0}" disabled></div>
+
+      <div class="field"><label>Ciudad / población de entrega</label>
         <select id="rf-ciudad" onchange="Aux._maybeInlineAdd('ciudad')">${opts(State.catalogos.ciudades,'nombre', editing?editing.ciudad:null)}</select>
         <div class="inline-add hidden" id="add-ciudad-wrap"><input id="add-ciudad-input" placeholder="Nueva ciudad/población"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSave('ciudades','nombre','add-ciudad-input','rf-ciudad')">Guardar</button></div>
       </div>
@@ -929,7 +938,10 @@ const Aux = {
     setTimeout(()=>{
       SignaturePads.rf = new SigPad(document.getElementById('rf-sig-canvas'));
       if(editing && editing.firma) SignaturePads.rf.loadFromDataURL(editing.firma);
-      if(editing && editing.concepto==='Estampillado') document.getElementById('estampillado-block').classList.remove('hidden');
+      const esEstampillado = conceptoActual==='Estampillado';
+      document.getElementById('estampillado-block').classList.toggle('hidden', !esEstampillado);
+      document.getElementById('ruta-block').classList.toggle('hidden', esEstampillado);
+      if(esEstampillado && !State.productosEstampillado.length){ State.productosEstampillado=[{referencia:'',cantidad:1}]; }
       Aux._renderProductoRows();
       if(!editing) Aux._recalcValor();
     }, 30);
@@ -969,20 +981,33 @@ const Aux = {
     Aux._recalcValor();
     toast('Conductor agregado (valor $80.000)','ok');
   },
-  _recalcValor(){
-    const nombre = document.getElementById('rf-conductor').value;
-    const found = State.catalogos.conductores.find(c=>c.nombre===nombre);
-    const valor = found ? found.valor_dia : 80000;
-    document.getElementById('rf-valor').value = valor;
+  _onConceptoChange(){
+    const esEstampillado = document.getElementById('rf-concepto').value==='Estampillado';
+    document.getElementById('estampillado-block').classList.toggle('hidden', !esEstampillado);
+    document.getElementById('ruta-block').classList.toggle('hidden', esEstampillado);
+    if(esEstampillado && !State.productosEstampillado.length){ State.productosEstampillado=[{referencia:'',cantidad:1}]; Aux._renderProductoRows(); }
+    Aux._recalcValor();
   },
-  _toggleEstampillado(){
-    const on = document.getElementById('rf-concepto').value==='Estampillado';
-    document.getElementById('estampillado-block').classList.toggle('hidden', !on);
-    if(on && !State.productosEstampillado.length){ State.productosEstampillado=[{referencia:'',cantidad:1}]; Aux._renderProductoRows(); }
+  _recalcValor(){
+    const concepto = document.getElementById('rf-concepto').value;
+    let valor = 0;
+    if(concepto==='Estampillado'){
+      valor = State.productosEstampillado.reduce((s,p)=> s + (Number(p.cantidad)||0)*28, 0);
+    } else {
+      const nombre = document.getElementById('rf-conductor').value;
+      if(nombre==='Ninguno' || nombre==='__nuevo__' || !nombre){
+        valor = 0;
+      } else {
+        const found = State.catalogos.conductores.find(c=>c.nombre===nombre);
+        valor = found ? Number(found.valor_dia) : 80000;
+      }
+    }
+    document.getElementById('rf-valor').value = valor;
   },
   _addProductoRow(){
     State.productosEstampillado.push({referencia:'',cantidad:1});
     Aux._renderProductoRows();
+    Aux._recalcValor();
   },
   _renderProductoRows(){
     const wrap = document.getElementById('productos-rows');
@@ -990,35 +1015,49 @@ const Aux = {
     wrap.innerHTML = State.productosEstampillado.map((p,i)=>`
       <div class="product-row">
         <input placeholder="Referencia / producto" value="${esc(p.referencia)}" oninput="State.productosEstampillado[${i}].referencia=this.value">
-        <input type="number" min="1" placeholder="Cant." value="${p.cantidad}" oninput="State.productosEstampillado[${i}].cantidad=this.value">
+        <input type="number" min="1" placeholder="Cant." value="${p.cantidad}" oninput="State.productosEstampillado[${i}].cantidad=this.value; Aux._recalcValor();">
         <button class="btn btn-danger btn-sm" onclick="Aux._removeProductoRow(${i})">✕</button>
       </div>`).join('');
   },
   _removeProductoRow(i){
     State.productosEstampillado.splice(i,1);
     Aux._renderProductoRows();
+    Aux._recalcValor();
   },
   async saveRegistro(){
     const fecha = document.getElementById('rf-fecha').value;
     const placa = document.getElementById('rf-placa').value;
-    const conductor = document.getElementById('rf-conductor').value;
-    const valor = Number(document.getElementById('rf-valor').value)||0;
-    const tipo_servicio = document.getElementById('rf-tiposervicio').value;
     const concepto = document.getElementById('rf-concepto').value;
     const ciudad = document.getElementById('rf-ciudad').value;
-    if([placa,conductor,tipo_servicio,ciudad].includes('__nuevo__')){ toast('Guarda las opciones nuevas antes de continuar','err'); return; }
-    if(!fecha || !placa || !conductor || !ciudad){ toast('Completa todos los campos','err'); return; }
+    const esEstampillado = concepto==='Estampillado';
+
+    let conductor = 'Ninguno', tipo_servicio = '-';
+    if(!esEstampillado){
+      conductor = document.getElementById('rf-conductor').value;
+      tipo_servicio = document.getElementById('rf-tiposervicio').value;
+    }
+
+    if([placa,ciudad].includes('__nuevo__') || (!esEstampillado && [conductor,tipo_servicio].includes('__nuevo__'))){
+      toast('Guarda las opciones nuevas antes de continuar','err'); return;
+    }
+    if(!fecha || !placa || !ciudad){ toast('Completa todos los campos','err'); return; }
+    if(!esEstampillado && (!conductor || !tipo_servicio)){ toast('Completa el tipo de ruta y el conductor','err'); return; }
+
     let productos = [];
-    if(concepto==='Estampillado'){
-      productos = State.productosEstampillado.filter(p=>p.referencia);
-      if(!productos.length){ toast('Agrega al menos un producto estampillado','err'); return; }
+    if(esEstampillado){
+      productos = State.productosEstampillado.filter(p=>p.referencia && Number(p.cantidad)>0);
+      if(!productos.length){ toast('Agrega al menos un producto estampillado con cantidad','err'); return; }
     }
+
+    const valor = Number(document.getElementById('rf-valor').value)||0;
     const firma = SignaturePads.rf ? SignaturePads.rf.toDataURL() : '';
-    let actividad = `${tipo_servicio} - ${concepto}`;
-    if(concepto==='Estampillado'){
-      actividad += ' (' + productos.map(p=>`${p.referencia} x${p.cantidad}`).join(', ') + ')';
+
+    let actividad;
+    if(esEstampillado){
+      actividad = 'Estampillado (' + productos.map(p=>`${p.referencia} x${p.cantidad}`).join(', ') + `) - ${ciudad}`;
+    } else {
+      actividad = `${tipo_servicio} - ${ciudad}`;
     }
-    actividad += ` - ${ciudad}`;
 
     const payload = { auxiliar_id: State.session.auxiliar.id, fecha, placa, conductor, valor, tipo_servicio, concepto, productos, ciudad, actividad, firma, es_descuento:false, creado_por:'auxiliar' };
 
