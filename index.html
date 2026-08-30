@@ -58,6 +58,15 @@ a{color:inherit;}
   overflow:hidden;display:grid;grid-template-columns:1.1fr 1.4fr;
   box-shadow:0 30px 60px -20px rgba(0,0,0,0.5);
 }
+#quick-screen{
+  display:none;min-height:100vh;align-items:center;justify-content:center;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(242,153,74,0.16), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(18,40,63,0.18), transparent 45%),
+    var(--navy);
+  padding:24px;
+}
+#quick-screen.show{display:flex;}
 @media (max-width:820px){ .login-card{grid-template-columns:1fr;} .login-hero{display:none;} }
 .login-hero{
   background:linear-gradient(160deg,var(--navy) 0%,var(--navy-2) 100%);
@@ -243,17 +252,33 @@ table.datatable tr:last-child td{border-bottom:none;}
 .small-note{font-size:12px;color:var(--ink-soft);margin-top:4px;}
 .section-divider{border:none;border-top:1px solid var(--line);margin:18px 0;}
 
-/* Frame amplio de previsualización del reporte (visible, antes de generar el PDF) */
-.report-preview-frame{
-  width:100%;max-height:75vh;overflow:auto;background:#eae6d8;border:1px solid var(--line-strong);
-  border-radius:12px;padding:28px;display:flex;justify-content:center;
+/* Vista previa de reporte antes de generar PDF */
+.preview-overlay{
+  position:fixed;inset:0;background:rgba(12,20,30,0.65);display:none;align-items:flex-start;justify-content:center;
+  padding:30px 16px;overflow-y:auto;z-index:1100;
 }
-.report-preview-frame .doc-page{box-shadow:0 10px 30px rgba(0,0,0,0.18);flex-shrink:0;}
+.preview-overlay.show{display:flex;}
+.preview-panel{
+  background:#efece2;border-radius:14px;max-width:920px;width:100%;padding:18px;position:relative;
+  display:flex;flex-direction:column;gap:14px;box-shadow:0 30px 60px -20px rgba(0,0,0,0.5);
+}
+.preview-header{display:flex;align-items:center;justify-content:space-between;padding:0 4px;}
+.preview-header h3{margin:0;font-size:16px;}
+.preview-header .small-note{margin:2px 0 0;}
+.preview-frame{
+  background:#d8d3c2;border-radius:10px;padding:20px;overflow:auto;max-height:68vh;
+  display:flex;justify-content:center;
+}
+.preview-frame .doc-page{box-shadow:0 10px 30px rgba(0,0,0,0.28);}
+.preview-actions{display:flex;justify-content:flex-end;gap:10px;padding:0 4px;flex-wrap:wrap;}
 @media (max-width:700px){
-  .report-preview-frame{padding:16px;max-height:65vh;}
+  .preview-panel{padding:14px;}
+  .preview-frame{padding:12px;max-height:60vh;}
+  .preview-actions{justify-content:stretch;}
+  .preview-actions .btn{flex:1;}
 }
 
-/* Printable cuenta de cobro template (offscreen) */
+/* Printable cuenta de cobro template (offscreen, usado para renderizar el PDF final) */
 #print-root{position:fixed;left:-9999px;top:0;}
 .doc-page{
   width:816px;min-height:1056px;background:#fff;color:#111;padding:70px 66px;
@@ -292,6 +317,7 @@ table.datatable tr:last-child td{border-bottom:none;}
     <div class="login-body">
       <div class="seg-tabs">
         <button class="active" id="seg-aux" onclick="UI.setLoginMode('aux')">Auxiliar</button>
+        <button id="seg-cond" onclick="UI.setLoginMode('cond')">Conductor</button>
         <button id="seg-admin" onclick="UI.setLoginMode('admin')">Administrador</button>
       </div>
 
@@ -306,7 +332,7 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="field"><label>Contraseña (4 dígitos)</label><input id="in-pin" maxlength="4" inputmode="numeric" placeholder="••••"></div>
           <button class="btn btn-primary btn-block" onclick="Auth.loginAuxiliar()">Ingresar</button>
           <div style="text-align:center;margin-top:12px;">
-            <button class="link-btn" onclick="UI.openForgot()">¿Olvidaste tu contraseña?</button>
+            <button class="link-btn" onclick="UI.openForgot('auxiliar')">¿Olvidaste tu contraseña?</button>
           </div>
         </div>
         <div id="aux-reg" class="hidden">
@@ -316,11 +342,64 @@ table.datatable tr:last-child td{border-bottom:none;}
         </div>
       </div>
 
+      <!-- CONDUCTOR LOGIN -->
+      <div id="pane-cond" class="hidden">
+        <div class="subtabs">
+          <button class="active" id="sub-cond-ingresar" onclick="UI.setCondSub('in')">Ingresar</button>
+          <button id="sub-cond-registrar" onclick="UI.setCondSub('reg')">Crear cuenta</button>
+        </div>
+        <div id="cond-in">
+          <div class="field"><label>Cédula</label><input id="in-cond-cedula" inputmode="numeric" placeholder="Ej. 1082345678"></div>
+          <div class="field"><label>Contraseña (4 dígitos)</label><input id="in-cond-pin" maxlength="4" inputmode="numeric" placeholder="••••"></div>
+          <button class="btn btn-primary btn-block" onclick="Auth.loginConductor()">Ingresar</button>
+          <div style="text-align:center;margin-top:12px;">
+            <button class="link-btn" onclick="UI.openForgot('conductor')">¿Olvidaste tu contraseña?</button>
+          </div>
+        </div>
+        <div id="cond-reg" class="hidden">
+          <div class="field"><label>Cédula</label><input id="reg-cond-cedula" inputmode="numeric" placeholder="Ej. 1082345678"></div>
+          <p class="small-note">Al crear tu cuenta se generará una contraseña de 4 dígitos que podrás cambiar luego desde tu perfil.</p>
+          <button class="btn btn-navy btn-block" onclick="Auth.registerConductor()">Crear cuenta</button>
+        </div>
+      </div>
+
       <!-- ADMIN LOGIN -->
       <div id="pane-admin" class="hidden">
         <div class="field"><label>Clave de administrador</label><input id="admin-pass" type="password" maxlength="12" placeholder="••••"></div>
         <button class="btn btn-navy btn-block" onclick="Auth.loginAdmin()">Ingresar como administrador</button>
         <p class="small-note">Clave por defecto: 1234 (modificable desde Configuración).</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== REGISTRO RÁPIDO (acceso oculto vía QR) ===================== -->
+<div id="quick-screen">
+  <div class="login-card" style="grid-template-columns:1fr;max-width:520px;">
+    <div class="login-body">
+      <span class="platenum">REGISTRO RÁPIDO</span>
+      <h1 style="font-size:22px;margin:0 0 8px;">Registrar día laborado</h1>
+      <p class="small-note" style="margin-bottom:18px;">Ingresa tu número de cédula para traer tus datos y registrar el día de servicio.</p>
+
+      <div id="qr-step-cedula">
+        <div class="field"><label>Cédula</label><input id="qr-cedula" inputmode="numeric" placeholder="Ej. 1082345678" onkeydown="if(event.key==='Enter') QuickRegistro.buscar();"></div>
+        <button class="btn btn-primary btn-block" onclick="QuickRegistro.buscar()">Buscar mis datos</button>
+      </div>
+
+      <div id="qr-found" class="hidden" style="margin-top:18px;">
+        <div class="card" style="margin-bottom:0;">
+          <div class="small-note">Auxiliar encontrado</div>
+          <div style="font-weight:700;font-size:16px;" id="qr-found-name"></div>
+          <div class="mono small-note" id="qr-found-cc"></div>
+        </div>
+        <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="QuickRegistro.abrirFormulario()">Registrar día laborado</button>
+        <div style="text-align:center;margin-top:10px;"><button class="link-btn" onclick="QuickRegistro.reset()">No soy yo, buscar otra cédula</button></div>
+      </div>
+
+      <div id="qr-success" class="hidden card" style="margin-top:18px;text-align:center;">
+        <h3 style="color:var(--success);margin-bottom:6px;">¡Registro guardado!</h3>
+        <p class="small-note">Tu día laborado quedó registrado correctamente en el sistema.</p>
+        <button class="btn btn-navy btn-block" style="margin-top:8px;" onclick="QuickRegistro.reset()">Registrar otro día</button>
       </div>
     </div>
   </div>
@@ -419,16 +498,86 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="field"><label>Desde</label><input type="date" id="rep-desde"></div>
           <div class="field"><label>Hasta</label><input type="date" id="rep-hasta"></div>
         </div>
-        <button class="btn btn-primary" onclick="Reportes.generarAuxiliar()">Previsualizar reporte</button>
+        <button class="btn btn-primary" onclick="Reportes.generarAuxiliar()">Generar reporte en PDF</button>
       </div>
-      <div class="card hidden" id="preview-aux-card">
-        <h3>Previsualización de la cuenta de cobro</h3>
-        <p class="small-note" style="margin-top:-6px;">Revisa que todo esté correcto antes de generar el PDF final.</p>
-        <div class="report-preview-frame" id="preview-aux-frame"></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
-          <button class="btn btn-primary" onclick="Reportes.confirmarDescargaAux()">Generar PDF</button>
-          <button class="btn btn-ghost" onclick="Reportes.cerrarPreviewAux()">Cerrar previsualización</button>
+    </div>
+
+    <!-- ===== CONDUCTOR: ONBOARDING (primer login) ===== -->
+    <div class="view" id="view-onboarding-cond">
+      <div class="card" style="max-width:640px;">
+        <h3>Completa tu perfil</h3>
+        <p class="small-note" style="margin-top:-8px;margin-bottom:16px;">Estos datos aparecerán en tus reportes de gastos.</p>
+        <div class="field"><label>Nombre completo</label><input id="obc-nombre"></div>
+        <div class="grid2">
+          <div class="field"><label>Teléfono</label><input id="obc-telefono" inputmode="tel"></div>
+          <div class="field"><label>Correo</label><input id="obc-correo" type="email"></div>
         </div>
+        <div class="field"><label>Dirección</label><input id="obc-direccion"></div>
+        <div class="field">
+          <label>Firma digital</label>
+          <div class="sigwrap"><canvas id="obc-sig-canvas"></canvas><span class="sig-hint">Firma aquí con el mouse o el dedo</span></div>
+          <div class="sig-actions">
+            <button class="btn btn-ghost btn-sm" onclick="SignaturePads.obc.clear()">Borrar firma</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="Conductor.saveOnboarding()">Guardar y continuar</button>
+      </div>
+    </div>
+
+    <!-- ===== CONDUCTOR: PERFIL ===== -->
+    <div class="view" id="view-perfil-cond">
+      <div class="card" style="max-width:640px;">
+        <h3>Mis datos</h3>
+        <div class="grid2">
+          <div class="field"><label>Nombre completo</label><input id="pfc-nombre"></div>
+          <div class="field"><label>Cédula</label><input id="pfc-cedula" disabled></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Teléfono</label><input id="pfc-telefono"></div>
+          <div class="field"><label>Correo</label><input id="pfc-correo" type="email"></div>
+        </div>
+        <div class="field"><label>Dirección</label><input id="pfc-direccion"></div>
+        <div class="field">
+          <label>Firma digital</label>
+          <div class="sigwrap"><canvas id="pfc-sig-canvas"></canvas><span class="sig-hint">Firma aquí con el mouse o el dedo</span></div>
+          <div class="sig-actions">
+            <button class="btn btn-ghost btn-sm" onclick="SignaturePads.pfc.clear()">Borrar firma</button>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="Conductor.saveProfile()">Guardar cambios</button>
+      </div>
+      <div class="card" style="max-width:640px;">
+        <h3>Cambiar contraseña</h3>
+        <div class="grid3">
+          <div class="field"><label>Actual</label><input id="pfc-pin-old" maxlength="4" inputmode="numeric"></div>
+          <div class="field"><label>Nueva</label><input id="pfc-pin-new" maxlength="4" inputmode="numeric"></div>
+          <div class="field"><label>Confirmar</label><input id="pfc-pin-new2" maxlength="4" inputmode="numeric"></div>
+        </div>
+        <button class="btn btn-navy" onclick="Conductor.changePin()">Actualizar contraseña</button>
+      </div>
+    </div>
+
+    <!-- ===== CONDUCTOR: GASTOS DE VIAJE ===== -->
+    <div class="view" id="view-gastos-viaje">
+      <div style="margin-bottom:16px;"><button class="btn btn-primary" onclick="Conductor.openGastoForm(null,false)">+ Nuevo gasto de viaje</button></div>
+      <div id="gastos-viaje-list"></div>
+    </div>
+
+    <!-- ===== CONDUCTOR: DESCARGUE / COTEROS ===== -->
+    <div class="view" id="view-descargue">
+      <div style="margin-bottom:16px;"><button class="btn btn-primary" onclick="Conductor.openGastoForm(null,true)">+ Nuevo gasto de descargue</button></div>
+      <div id="descargue-list"></div>
+    </div>
+
+    <!-- ===== CONDUCTOR: REPORTES ===== -->
+    <div class="view" id="view-reportes-cond">
+      <div class="card" style="max-width:560px;">
+        <h3>Generar reporte de gastos</h3>
+        <div class="grid2">
+          <div class="field"><label>Desde</label><input type="date" id="repc-desde"></div>
+          <div class="field"><label>Hasta</label><input type="date" id="repc-hasta"></div>
+        </div>
+        <button class="btn btn-primary" onclick="Conductor.generarReporte()">Generar reporte en PDF</button>
       </div>
     </div>
 
@@ -457,6 +606,12 @@ table.datatable tr:last-child td{border-bottom:none;}
           <ul class="catalog-list" id="cat-ciudades"></ul>
           <div class="inline-add"><input id="new-ciudad" placeholder="Ej. Aracataca"><button class="btn btn-navy btn-sm" onclick="Catalogos.add('ciudades','nombre','new-ciudad')">Agregar</button></div>
         </div>
+        <div class="card">
+          <h3>Lugares de gasto (pueblos)</h3>
+          <ul class="catalog-list" id="cat-lugares"></ul>
+          <div class="inline-add"><input id="new-lugar" placeholder="Ej. Fundación"><button class="btn btn-navy btn-sm" onclick="Catalogos.add('lugares_gasto','nombre','new-lugar')">Agregar</button></div>
+          <p class="small-note">Estas opciones aparecen como "Lugar" en los gastos de viaje registrados por los conductores.</p>
+        </div>
       </div>
     </div>
 
@@ -469,6 +624,15 @@ table.datatable tr:last-child td{border-bottom:none;}
       <div id="auxiliar-detalle"></div>
     </div>
 
+    <!-- ===== ADMIN: CONDUCTORES ===== -->
+    <div class="view" id="view-conductores-admin">
+      <div class="card">
+        <h3>Conductores registrados</h3>
+        <table class="datatable" id="tabla-conductores"><thead><tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+      <div id="conductor-detalle"></div>
+    </div>
+
     <!-- ===== ADMIN: REPORTES ===== -->
     <div class="view" id="view-reportes-admin">
       <div class="card" style="max-width:600px;">
@@ -478,16 +642,7 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="field"><label>Desde</label><input type="date" id="admrep-desde"></div>
           <div class="field"><label>Hasta</label><input type="date" id="admrep-hasta"></div>
         </div>
-        <button class="btn btn-primary" onclick="Reportes.generarAdmin()">Previsualizar reporte</button>
-      </div>
-      <div class="card hidden" id="preview-admin-card">
-        <h3>Previsualización de la cuenta de cobro</h3>
-        <p class="small-note" style="margin-top:-6px;">Revisa que todo esté correcto antes de generar el PDF final.</p>
-        <div class="report-preview-frame" id="preview-admin-frame"></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
-          <button class="btn btn-primary" onclick="Reportes.confirmarDescargaAdmin()">Generar PDF</button>
-          <button class="btn btn-ghost" onclick="Reportes.cerrarPreviewAdmin()">Cerrar previsualización</button>
-        </div>
+        <button class="btn btn-primary" onclick="Reportes.generarAdmin()">Generar reporte en PDF</button>
       </div>
     </div>
 
@@ -513,17 +668,14 @@ table.datatable tr:last-child td{border-bottom:none;}
         <p class="small-note">El sistema toma la fila de encabezados de tu Excel (la que contiene "FECHA") para definir las columnas de la tabla en el PDF de la cuenta de cobro.</p>
       </div>
       <div class="card" style="max-width:560px;">
-        <h3>Código QR · Registro rápido de día laborado</h3>
-        <p class="small-note" style="margin-top:-6px;">Genera un QR que abre <span class="mono">registro-rapido.html</span> (la pestaña oculta de autorregistro). El auxiliar escanea, escribe su cédula y el sistema le muestra su nombre, la fecha y el mismo formulario de día laborado, listo para guardarse directo en su historial.</p>
-        <div class="field">
-          <label>URL donde publicaste registro-rapido.html</label>
-          <input id="qr-url" placeholder="Ej. https://tu-dominio.com/registro-rapido.html" value="">
+        <h3>Registro rápido por QR</h3>
+        <p class="small-note" style="margin-top:-6px;">Los auxiliares pueden escanear este código para registrar un día laborado ingresando solo su cédula, sin iniciar sesión. Imprímelo o pégalo en el vehículo.</p>
+        <div style="display:flex;justify-content:center;margin:14px 0;"><canvas id="qr-canvas"></canvas></div>
+        <div class="mono small-note" id="qr-url-text" style="word-break:break-all;text-align:center;"></div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;">
+          <button class="btn btn-navy btn-sm" onclick="AdminMod.generarQR()">Generar / actualizar QR</button>
+          <button class="btn btn-ghost btn-sm" onclick="AdminMod.descargarQR()">Descargar QR (PNG)</button>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-navy btn-sm" onclick="QRGen.generar()">Generar QR</button>
-          <button class="btn btn-ghost btn-sm hidden" id="qr-download-btn" onclick="QRGen.descargar()">Descargar PNG</button>
-        </div>
-        <div id="qr-canvas-wrap" style="margin-top:16px;text-align:center;"></div>
       </div>
     </div>
 
@@ -533,6 +685,24 @@ table.datatable tr:last-child td{border-bottom:none;}
 <!-- ===================== MODAL GENERICO ===================== -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal-box" id="modal-box"></div>
+</div>
+
+<!-- ===================== VISTA PREVIA DE REPORTE (antes de generar PDF) ===================== -->
+<div class="preview-overlay" id="preview-overlay">
+  <div class="preview-panel">
+    <div class="preview-header">
+      <div>
+        <h3>Vista previa del reporte</h3>
+        <p class="small-note">Revisa el documento antes de generar el PDF final.</p>
+      </div>
+      <button class="modal-close" style="position:static;" onclick="Reportes.cerrarPreview()">&times;</button>
+    </div>
+    <div class="preview-frame" id="preview-frame"></div>
+    <div class="preview-actions">
+      <button class="btn btn-ghost" onclick="Reportes.cerrarPreview()">Cancelar</button>
+      <button class="btn btn-primary" id="preview-download-btn">Descargar PDF</button>
+    </div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -553,14 +723,22 @@ const CARGUE_POBLACIONES = 'CARGUE POBLACIONES';
 const CARGUE_POBLACIONES_VALOR = 28000;
 const State = {
   session: null,           // {tipo:'auxiliar'|'admin', auxiliar:{...}}
-  catalogos: { placas:[], conductores:[], tipos_servicio:[], ciudades:[] },
+  catalogos: { placas:[], conductores:[], tipos_servicio:[], ciudades:[], lugares:[] },
   adminConfig: { password:'1234', columnas_reporte:['FECHA','PLACA','ACTIVIDAD','VALOR'] },
   registrosCache: [],
   auxiliaresCache: [],
+  conductoresAppCache: [],
+  auxiliaresNombresCache: [],
   editRegistroId: null,
   productosEstampillado: [],
-  auxDetalleAbierto: null
+  auxDetalleAbierto: null,
+  gastosCache: [],
+  editGastoId: null,
+  gastoImagenDataURL: '',
+  condDetalleAbierto: null
 };
+const TIPOS_GASTO_VIAJE = ['Peaje','Alimentación','Combustible','Viáticos entregados al auxiliar','Otro'];
+const TIPO_GASTO_DESCARGUE = 'Descargue coteros (cargue/descargue)';
 
 /* ============================================================
    UTILIDADES
@@ -584,6 +762,29 @@ function toast(msg, type){
   setTimeout(()=>el.remove(), 4200);
 }
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fileToCompressedDataURL(file, maxW){
+  maxW = maxW || 900;
+  return new Promise((resolve, reject)=>{
+    if(!file){ resolve(''); return; }
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const scale = Math.min(1, maxW/img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width*scale);
+        canvas.height = Math.round(img.height*scale);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 function openModal(html){
   document.getElementById('modal-box').innerHTML = `<button class="modal-close" onclick="closeModal()">&times;</button>${html}`;
@@ -650,8 +851,10 @@ const SignaturePads = {};
 const UI = {
   setLoginMode(mode){
     document.getElementById('seg-aux').classList.toggle('active', mode==='aux');
+    document.getElementById('seg-cond').classList.toggle('active', mode==='cond');
     document.getElementById('seg-admin').classList.toggle('active', mode==='admin');
     document.getElementById('pane-aux').classList.toggle('hidden', mode!=='aux');
+    document.getElementById('pane-cond').classList.toggle('hidden', mode!=='cond');
     document.getElementById('pane-admin').classList.toggle('hidden', mode!=='admin');
   },
   setAuxSub(sub){
@@ -660,13 +863,19 @@ const UI = {
     document.getElementById('aux-in').classList.toggle('hidden', sub!=='in');
     document.getElementById('aux-reg').classList.toggle('hidden', sub!=='reg');
   },
-  openForgot(){
+  openForgot(tipo){
     openModal(`
       <h3>Recuperar contraseña</h3>
       <div class="field"><label>Cédula</label><input id="forgot-cedula" inputmode="numeric"></div>
-      <button class="btn btn-primary" onclick="Auth.forgotPassword()">Consultar</button>
+      <button class="btn btn-primary" onclick="Auth.forgotPassword('${tipo||'auxiliar'}')">Consultar</button>
       <div id="forgot-result" style="margin-top:14px;"></div>
     `);
+  },
+  setCondSub(sub){
+    document.getElementById('sub-cond-ingresar').classList.toggle('active', sub==='in');
+    document.getElementById('sub-cond-registrar').classList.toggle('active', sub==='reg');
+    document.getElementById('cond-in').classList.toggle('hidden', sub!=='in');
+    document.getElementById('cond-reg').classList.toggle('hidden', sub!=='reg');
   },
   showApp(view){
     document.getElementById('login-screen').style.display='none';
@@ -684,10 +893,20 @@ const UI = {
       `;
       document.getElementById('side-nombre').textContent = State.session.auxiliar.nombre_completo || 'Sin nombre';
       document.getElementById('side-detalle').textContent = 'CC ' + State.session.auxiliar.cedula;
+    } else if(State.session.tipo==='conductor'){
+      nav.innerHTML = `
+        <button class="nav-item" data-v="perfil-cond" onclick="UI.goTo('perfil-cond')">Perfil</button>
+        <button class="nav-item" data-v="gastos-viaje" onclick="UI.goTo('gastos-viaje')">Gastos de viaje</button>
+        <button class="nav-item" data-v="descargue" onclick="UI.goTo('descargue')">Descargue (coteros)</button>
+        <button class="nav-item" data-v="reportes-cond" onclick="UI.goTo('reportes-cond')">Reportes</button>
+      `;
+      document.getElementById('side-nombre').textContent = State.session.auxiliar.nombre_completo || 'Sin nombre';
+      document.getElementById('side-detalle').textContent = 'CC ' + State.session.auxiliar.cedula;
     } else {
       nav.innerHTML = `
         <button class="nav-item" data-v="catalogos" onclick="UI.goTo('catalogos')">Catálogos</button>
         <button class="nav-item" data-v="auxiliares" onclick="UI.goTo('auxiliares')">Auxiliares</button>
+        <button class="nav-item" data-v="conductores-admin" onclick="UI.goTo('conductores-admin')">Conductores</button>
         <button class="nav-item" data-v="reportes-admin" onclick="UI.goTo('reportes-admin')">Reportes</button>
         <button class="nav-item" data-v="config" onclick="UI.goTo('config')">Configuración</button>
       `;
@@ -712,8 +931,14 @@ const UI = {
       perfil:['Mi perfil','Tus datos personales y firma digital'],
       dias:['Días laborados','Registra cada servicio prestado en ruta'],
       'reportes-aux':['Reportes','Genera tu cuenta de cobro en PDF'],
-      catalogos:['Catálogos','Placas, conductores, tipos de servicio y ciudades'],
+      'onboarding-cond':['Completa tu perfil',''],
+      'perfil-cond':['Mi perfil','Tus datos personales y firma digital'],
+      'gastos-viaje':['Gastos de viaje','Peajes, alimentación, combustible, viáticos y otros gastos'],
+      descargue:['Descargue (coteros)','Registra los pagos de cargue y descargue'],
+      'reportes-cond':['Reportes','Genera tu reporte de gastos en PDF'],
+      catalogos:['Catálogos','Placas, conductores, tipos de servicio, ciudades y lugares'],
       auxiliares:['Auxiliares','Perfiles, registros y descuentos'],
+      'conductores-admin':['Conductores','Perfiles y reportes de gastos de viaje'],
       'reportes-admin':['Reportes','Genera la cuenta de cobro de cualquier auxiliar'],
       config:['Configuración','Clave de acceso y plantilla de reporte']
     };
@@ -722,8 +947,12 @@ const UI = {
     document.getElementById('view-sub').textContent = (titles[view]||['',''])[1];
     if(view==='dias') Aux.renderDias();
     if(view==='perfil') Aux.fillProfileForm();
+    if(view==='perfil-cond') Conductor.fillProfileForm();
+    if(view==='gastos-viaje') Conductor.renderGastos('viaje');
+    if(view==='descargue') Conductor.renderGastos('descargue');
     if(view==='catalogos') Catalogos.renderAll();
     if(view==='auxiliares') AdminMod.renderAuxiliares();
+    if(view==='conductores-admin') AdminMod.renderConductores();
     if(view==='reportes-admin') AdminMod.fillAuxSelect();
     if(view==='config') AdminMod.fillConfig();
   }
@@ -763,11 +992,43 @@ const Auth = {
     localStorage.setItem('cc_session', JSON.stringify({tipo:'auxiliar', id:data.id}));
     Bootstrap.afterLogin();
   },
-  async forgotPassword(){
+  async registerConductor(){
+    const cedula = document.getElementById('reg-cond-cedula').value.trim();
+    if(!cedula){ toast('Ingresa tu número de cédula','err'); return; }
+    const { data: existing } = await sb.from('conductores_app').select('id').eq('cedula', cedula).maybeSingle();
+    if(existing){ toast('Esa cédula ya está registrada. Inicia sesión.','err'); return; }
+    const pin = rand4();
+    const { data, error } = await sb.from('conductores_app').insert({ cedula, password: pin }).select().single();
+    if(error){ toast('No se pudo crear la cuenta: '+error.message,'err'); return; }
+    openModal(`
+      <h3>Cuenta creada</h3>
+      <p>Tu contraseña de 4 dígitos es:</p>
+      <div class="mono" style="font-size:28px;font-weight:700;letter-spacing:6px;background:#eee8d8;padding:14px;border-radius:8px;text-align:center;">${pin}</div>
+      <p class="small-note">Guárdala bien, la necesitarás para ingresar. Podrás cambiarla luego desde tu perfil.</p>
+      <button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="closeModal(); Auth._enterAsConductor(${JSON.stringify(data).replace(/"/g,'&quot;')})">Continuar</button>
+    `);
+  },
+  async loginConductor(){
+    const cedula = document.getElementById('in-cond-cedula').value.trim();
+    const pin = document.getElementById('in-cond-pin').value.trim();
+    if(!cedula || !pin){ toast('Completa cédula y contraseña','err'); return; }
+    const { data, error } = await sb.from('conductores_app').select('*').eq('cedula', cedula).maybeSingle();
+    if(error || !data){ toast('Cédula no encontrada','err'); return; }
+    if(String(data.password)!==pin){ toast('Contraseña incorrecta','err'); return; }
+    Auth._enterAsConductor(data);
+  },
+  _enterAsConductor(data){
+    State.session = { tipo:'conductor', auxiliar:data };
+    localStorage.setItem('cc_session', JSON.stringify({tipo:'conductor', id:data.id}));
+    Bootstrap.afterLogin();
+  },
+  async forgotPassword(tipo){
     const cedula = document.getElementById('forgot-cedula').value.trim();
     const box = document.getElementById('forgot-result');
-    const { data } = await sb.from('auxiliares').select('password').eq('cedula', cedula).maybeSingle();
-    if(!data){ box.innerHTML = `<p style="color:var(--danger);">No se encontró un auxiliar con esa cédula.</p>`; return; }
+    const tabla = tipo==='conductor' ? 'conductores_app' : 'auxiliares';
+    const etiqueta = tipo==='conductor' ? 'un conductor' : 'un auxiliar';
+    const { data } = await sb.from(tabla).select('password').eq('cedula', cedula).maybeSingle();
+    if(!data){ box.innerHTML = `<p style="color:var(--danger);">No se encontró ${etiqueta} con esa cédula.</p>`; return; }
     box.innerHTML = `<p>Tu contraseña actual es:</p><div class="mono" style="font-size:24px;font-weight:700;letter-spacing:5px;background:#eee8d8;padding:12px;border-radius:8px;text-align:center;">${data.password}</div>`;
   },
   async loginAdmin(){
@@ -804,6 +1065,17 @@ const Bootstrap = {
         UI.showApp('dias');
         setTimeout(()=>{ SignaturePads.pf = new SigPad(document.getElementById('pf-sig-canvas')); Aux.fillProfileForm(); }, 30);
       }
+    } else if(State.session.tipo==='conductor'){
+      const cond = State.session.auxiliar;
+      if(!cond.nombre_completo){
+        UI.showApp('onboarding-cond');
+        setTimeout(()=>{
+          SignaturePads.obc = new SigPad(document.getElementById('obc-sig-canvas'));
+        }, 30);
+      } else {
+        UI.showApp('gastos-viaje');
+        setTimeout(()=>{ SignaturePads.pfc = new SigPad(document.getElementById('pfc-sig-canvas')); Conductor.fillProfileForm(); }, 30);
+      }
     } else {
       UI.showApp('catalogos');
     }
@@ -818,6 +1090,10 @@ const Bootstrap = {
         const { data } = await sb.from('auxiliares').select('*').eq('id', s.id).maybeSingle();
         if(data){ State.session={tipo:'auxiliar', auxiliar:data}; await Bootstrap.afterLogin(); }
       }
+      else if(s.tipo==='conductor' && s.id){
+        const { data } = await sb.from('conductores_app').select('*').eq('id', s.id).maybeSingle();
+        if(data){ State.session={tipo:'conductor', auxiliar:data}; await Bootstrap.afterLogin(); }
+      }
     }catch(e){}
   }
 };
@@ -827,17 +1103,30 @@ const Bootstrap = {
    ============================================================ */
 const Catalogos = {
   async loadAll(){
-    const [p,c,t,ci] = await Promise.all([
+    const [p,c,t,ci,lg] = await Promise.all([
       sb.from('placas').select('*').order('placa'),
       sb.from('conductores').select('*').order('nombre'),
       sb.from('tipos_servicio').select('*').order('nombre'),
-      sb.from('ciudades').select('*').order('nombre')
+      sb.from('ciudades').select('*').order('nombre'),
+      sb.from('lugares_gasto').select('*').order('nombre')
     ]);
     State.catalogos.placas = p.data||[];
     State.catalogos.conductores = c.data||[];
     State.catalogos.tipos_servicio = t.data||[];
     State.catalogos.ciudades = ci.data||[];
+    State.catalogos.lugares = lg.data||[];
     await Catalogos._ensureCarguePoblaciones();
+    await Catalogos._ensureLugaresBase();
+  },
+  async _ensureLugaresBase(){
+    const base = ['Zona Bananera','Santa Ana','Río Frío'];
+    const faltantes = base.filter(n=>!State.catalogos.lugares.some(l=>(l.nombre||'').trim().toLowerCase()===n.toLowerCase()));
+    if(!faltantes.length) return;
+    const { error } = await sb.from('lugares_gasto').insert(faltantes.map(nombre=>({nombre})));
+    if(!error){
+      const { data } = await sb.from('lugares_gasto').select('*').order('nombre');
+      State.catalogos.lugares = data||[];
+    }
   },
   async _ensureCarguePoblaciones(){
     const existe = State.catalogos.tipos_servicio.some(t=>(t.nombre||'').trim().toUpperCase()===CARGUE_POBLACIONES);
@@ -898,6 +1187,7 @@ const Catalogos = {
     document.getElementById('cat-conductores').innerHTML = mk(State.catalogos.conductores,'conductores',true);
     document.getElementById('cat-servicios').innerHTML = mk(State.catalogos.tipos_servicio,'tipos_servicio',false);
     document.getElementById('cat-ciudades').innerHTML = mk(State.catalogos.ciudades,'ciudades',false);
+    document.getElementById('cat-lugares').innerHTML = mk(State.catalogos.lugares,'lugares_gasto',false);
   }
 };
 
@@ -1189,8 +1479,259 @@ const Aux = {
     }
     if(error){ toast('No se pudo guardar el registro','err'); return; }
     closeModal();
-    Aux.renderDias();
+    if(State.session && State.session.tipo==='quick'){
+      QuickRegistro.onSaved();
+    } else {
+      Aux.renderDias();
+    }
     toast('Registro guardado','ok');
+  }
+};
+
+/* ============================================================
+   CONDUCTOR: perfil / onboarding
+   ============================================================ */
+const Conductor = {
+  async saveOnboarding(){
+    const nombre = document.getElementById('obc-nombre').value.trim();
+    const telefono = document.getElementById('obc-telefono').value.trim();
+    const correo = document.getElementById('obc-correo').value.trim();
+    const direccion = document.getElementById('obc-direccion').value.trim();
+    if(!nombre || !direccion){ toast('Completa al menos nombre y dirección','err'); return; }
+    const firma = SignaturePads.obc ? SignaturePads.obc.toDataURL() : '';
+    const payload = { nombre_completo:nombre, telefono, correo, direccion, firma_digital:firma };
+    const { data, error } = await sb.from('conductores_app').update(payload).eq('id', State.session.auxiliar.id).select().single();
+    if(error){ toast('No se pudo guardar el perfil','err'); return; }
+    State.session.auxiliar = data;
+    toast('Perfil guardado','ok');
+    UI.showApp('gastos-viaje');
+    setTimeout(()=>{ SignaturePads.pfc = new SigPad(document.getElementById('pfc-sig-canvas')); Conductor.fillProfileForm(); }, 30);
+  },
+  fillProfileForm(){
+    const a = State.session.auxiliar;
+    document.getElementById('pfc-nombre').value = a.nombre_completo||'';
+    document.getElementById('pfc-cedula').value = a.cedula||'';
+    document.getElementById('pfc-telefono').value = a.telefono||'';
+    document.getElementById('pfc-correo').value = a.correo||'';
+    document.getElementById('pfc-direccion').value = a.direccion||'';
+    if(SignaturePads.pfc && a.firma_digital) setTimeout(()=>SignaturePads.pfc.loadFromDataURL(a.firma_digital), 50);
+  },
+  async saveProfile(){
+    const payload = {
+      nombre_completo: document.getElementById('pfc-nombre').value.trim(),
+      telefono: document.getElementById('pfc-telefono').value.trim(),
+      correo: document.getElementById('pfc-correo').value.trim(),
+      direccion: document.getElementById('pfc-direccion').value.trim()
+    };
+    const newSig = SignaturePads.pfc ? SignaturePads.pfc.toDataURL() : '';
+    if(newSig) payload.firma_digital = newSig;
+    const { data, error } = await sb.from('conductores_app').update(payload).eq('id', State.session.auxiliar.id).select().single();
+    if(error){ toast('No se pudo guardar','err'); return; }
+    State.session.auxiliar = data;
+    UI.buildNav();
+    toast('Perfil actualizado','ok');
+  },
+  async changePin(){
+    const old = document.getElementById('pfc-pin-old').value.trim();
+    const n1 = document.getElementById('pfc-pin-new').value.trim();
+    const n2 = document.getElementById('pfc-pin-new2').value.trim();
+    if(String(State.session.auxiliar.password)!==old){ toast('La contraseña actual no coincide','err'); return; }
+    if(!/^\d{4}$/.test(n1)){ toast('La nueva contraseña debe tener 4 dígitos','err'); return; }
+    if(n1!==n2){ toast('Las contraseñas nuevas no coinciden','err'); return; }
+    const { data, error } = await sb.from('conductores_app').update({password:n1}).eq('id', State.session.auxiliar.id).select().single();
+    if(error){ toast('No se pudo actualizar','err'); return; }
+    State.session.auxiliar = data;
+    document.getElementById('pfc-pin-old').value='';
+    document.getElementById('pfc-pin-new').value='';
+    document.getElementById('pfc-pin-new2').value='';
+    toast('Contraseña actualizada','ok');
+  },
+
+  /* ---- gastos de viaje / descargue ---- */
+  async _fetchGastos(){
+    const { data } = await sb.from('gastos_conductor').select('*').eq('conductor_id', State.session.auxiliar.id).order('fecha', {ascending:false});
+    State.gastosCache = data||[];
+  },
+  async renderGastos(seccion){
+    await Conductor._fetchGastos();
+    const esDescargue = seccion==='descargue';
+    const lista = State.gastosCache.filter(g => esDescargue ? g.tipo_gasto===TIPO_GASTO_DESCARGUE : g.tipo_gasto!==TIPO_GASTO_DESCARGUE);
+    const contId = esDescargue ? 'descargue-list' : 'gastos-viaje-list';
+    const cont = document.getElementById(contId);
+    if(!lista.length){ cont.innerHTML = `<div class="empty-state">Aún no has registrado ${esDescargue?'gastos de descargue':'gastos de viaje'}.</div>`; return; }
+    const total = lista.reduce((s,g)=>s+Number(g.valor||0),0);
+    cont.innerHTML = `<div class="small-note" style="margin-bottom:10px;">Total registrado: <b class="mono">${money(total)}</b></div>` +
+      lista.map(g=>Conductor._gastoTicketHTML(g,true)).join('');
+  },
+  _gastoTicketHTML(g, editable){
+    const partes = [];
+    if(g.placa && g.placa!=='-') partes.push('Placa '+g.placa);
+    if(g.auxiliar_nombre) partes.push('Aux. '+g.auxiliar_nombre);
+    if(g.lugar) partes.push(g.lugar);
+    return `
+    <div class="ticket">
+      <span class="platebadge">${esc(g.tipo_gasto)}</span>
+      <div class="tk-main">
+        <div class="tk-date">${fmtDate(g.fecha)}</div>
+        <div class="tk-desc">${esc(partes.join(' · '))}${g.concepto?(' · '+esc(g.concepto)):''}</div>
+        ${g.imagen?`<a href="${g.imagen}" target="_blank" class="small-note" style="text-decoration:underline;">Ver soporte adjunto</a>`:''}
+      </div>
+      <div class="tk-val">${money(g.valor)}</div>
+      ${editable?`<div class="ticket-actions">
+        <button class="btn btn-ghost btn-sm" onclick="Conductor.openGastoForm('${g.id}', ${g.tipo_gasto===TIPO_GASTO_DESCARGUE})">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="Conductor.deleteGasto('${g.id}')">Eliminar</button>
+      </div>`:''}
+    </div>`;
+  },
+  async deleteGasto(id){
+    if(!confirm('¿Eliminar este gasto?')) return;
+    const g = State.gastosCache.find(x=>x.id===id);
+    await sb.from('gastos_conductor').delete().eq('id', id);
+    Conductor.renderGastos(g && g.tipo_gasto===TIPO_GASTO_DESCARGUE ? 'descargue' : 'viaje');
+    toast('Gasto eliminado','ok');
+  },
+  async openGastoForm(id, esDescargue){
+    State.editGastoId = id||null;
+    State.gastoImagenDataURL = '';
+    const editing = id ? State.gastosCache.find(g=>g.id===id) : null;
+    if(editing) esDescargue = editing.tipo_gasto===TIPO_GASTO_DESCARGUE;
+
+    let auxNombres = State.auxiliaresNombresCache;
+    if(!auxNombres.length){
+      const { data } = await sb.from('auxiliares').select('nombre_completo,cedula').order('nombre_completo');
+      auxNombres = (data||[]).filter(a=>a.nombre_completo);
+      State.auxiliaresNombresCache = auxNombres;
+    }
+
+    const opts = (arr, field, current) => arr.map(o=>`<option value="${esc(o[field])}" ${current===o[field]?'selected':''}>${esc(o[field])}</option>`).join('') + `<option value="__nuevo__">+ Agregar nueva opción…</option>`;
+    const tipoOpts = TIPOS_GASTO_VIAJE.map(t=>`<option value="${esc(t)}" ${editing&&editing.tipo_gasto===t?'selected':''}>${esc(t)}</option>`).join('');
+    const auxOpts = `<option value="">Ninguno</option>` + auxNombres.map(a=>`<option value="${esc(a.nombre_completo)}" ${editing&&editing.auxiliar_nombre===a.nombre_completo?'selected':''}>${esc(a.nombre_completo)} (CC ${esc(a.cedula)})</option>`).join('');
+
+    openModal(`
+      <h3>${editing?'Editar':'Nuevo'} gasto ${esDescargue?'de descargue':'de viaje'}</h3>
+      <div class="grid2">
+        <div class="field"><label>Fecha</label><input type="date" id="gf-fecha" value="${editing?editing.fecha:todayISO()}"></div>
+        <div class="field"><label>Placa</label>
+          <select id="gf-placa" onchange="Conductor._maybeInlineAdd('placa')">${opts(State.catalogos.placas,'placa', editing?editing.placa:null)}</select>
+          <div class="inline-add hidden" id="add-gf-placa-wrap"><input id="add-gf-placa-input" placeholder="Nueva placa"><button class="btn btn-navy btn-sm" onclick="Conductor._inlineSave('placas','placa','add-gf-placa-input','gf-placa')">Guardar</button></div>
+        </div>
+      </div>
+      <div class="field"><label>Auxiliar que lo acompañó a ruta</label>
+        <select id="gf-auxiliar">${auxOpts}</select>
+      </div>
+      <div class="field ${esDescargue?'hidden':''}" id="gf-tipo-wrap"><label>Tipo de gasto</label>
+        <select id="gf-tipo" onchange="Conductor._onTipoChange()">${tipoOpts}</select>
+      </div>
+      <div class="field" id="gf-concepto-wrap" style="${(!esDescargue && (!editing || editing.tipo_gasto!=='Otro'))?'display:none;':''}">
+        <label>${esDescargue?'Detalle del descargue (coteros)':'Concepto del gasto'}</label>
+        <input id="gf-concepto" placeholder="${esDescargue?'Ej. Pago a coteros por descargue en bodega':'Describe el gasto'}" value="${editing?esc(editing.concepto||''):''}">
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Lugar (pueblo)</label>
+          <select id="gf-lugar" onchange="Conductor._maybeInlineAdd('lugar')">${opts(State.catalogos.lugares,'nombre', editing?editing.lugar:null)}</select>
+          <div class="inline-add hidden" id="add-gf-lugar-wrap"><input id="add-gf-lugar-input" placeholder="Nuevo lugar/pueblo"><button class="btn btn-navy btn-sm" onclick="Conductor._inlineSave('lugares_gasto','nombre','add-gf-lugar-input','gf-lugar')">Guardar</button></div>
+        </div>
+        <div class="field"><label>Valor</label><input type="number" id="gf-valor" value="${editing?editing.valor:''}" placeholder="Ej. 15000"></div>
+      </div>
+      <div class="field">
+        <label>Adjuntar imagen del ticket o recibo</label>
+        <input type="file" accept="image/*" id="gf-imagen" onchange="Conductor._onImagenChange(event)">
+        <div id="gf-imagen-preview" style="margin-top:8px;">${editing&&editing.imagen?`<img src="${editing.imagen}" style="max-width:160px;border:1px solid var(--line);border-radius:6px;">`:''}</div>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:6px;" onclick="Conductor.saveGasto(${esDescargue})">Guardar gasto</button>
+    `);
+    if(editing && editing.imagen) State.gastoImagenDataURL = editing.imagen;
+  },
+  _maybeInlineAdd(key){
+    const sel = document.getElementById('gf-'+key);
+    document.getElementById('add-gf-'+key+'-wrap').classList.toggle('hidden', sel.value!=='__nuevo__');
+  },
+  async _inlineSave(table, field, inputId, selectId){
+    const val = document.getElementById(inputId).value.trim();
+    if(!val){ toast('Escribe un valor','err'); return; }
+    const payload={}; payload[field]=val;
+    const { error } = await sb.from(table).insert(payload);
+    if(error){ toast('No se pudo agregar','err'); return; }
+    await Catalogos.loadAll();
+    const sel = document.getElementById(selectId);
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = val;
+    sel.insertBefore(opt, sel.lastElementChild);
+    sel.value = val;
+    document.getElementById(inputId.replace('-input','-wrap')).classList.add('hidden');
+    toast('Agregado','ok');
+  },
+  _onTipoChange(){
+    const tipo = document.getElementById('gf-tipo').value;
+    document.getElementById('gf-concepto-wrap').style.display = tipo==='Otro' ? '' : 'none';
+  },
+  async _onImagenChange(ev){
+    const file = ev.target.files[0];
+    if(!file) return;
+    const dataUrl = await fileToCompressedDataURL(file, 900);
+    State.gastoImagenDataURL = dataUrl;
+    document.getElementById('gf-imagen-preview').innerHTML = `<img src="${dataUrl}" style="max-width:160px;border:1px solid var(--line);border-radius:6px;">`;
+  },
+  async saveGasto(esDescargue){
+    const fecha = document.getElementById('gf-fecha').value;
+    const placa = document.getElementById('gf-placa').value;
+    const auxiliar_nombre = document.getElementById('gf-auxiliar').value;
+    const lugar = document.getElementById('gf-lugar').value;
+    const valor = Number(document.getElementById('gf-valor').value)||0;
+    const concepto = document.getElementById('gf-concepto') ? document.getElementById('gf-concepto').value.trim() : '';
+    const tipo_gasto = esDescargue ? TIPO_GASTO_DESCARGUE : document.getElementById('gf-tipo').value;
+
+    if([placa,lugar].includes('__nuevo__')){ toast('Guarda las opciones nuevas antes de continuar','err'); return; }
+    if(!fecha || !placa){ toast('Completa al menos la fecha y la placa','err'); return; }
+    if(!valor){ toast('Ingresa el valor del gasto','err'); return; }
+    if(!esDescargue && tipo_gasto==='Otro' && !concepto){ toast('Describe el concepto del gasto','err'); return; }
+    if(esDescargue && !concepto){ toast('Describe el detalle del descargue','err'); return; }
+
+    const payload = {
+      conductor_id: State.session.auxiliar.id, fecha, placa, auxiliar_nombre: auxiliar_nombre||null,
+      tipo_gasto, lugar: lugar||null, concepto: concepto||null, valor,
+      imagen: State.gastoImagenDataURL || null, creado_por:'conductor'
+    };
+
+    let error;
+    if(State.editGastoId){
+      ({ error } = await sb.from('gastos_conductor').update(payload).eq('id', State.editGastoId));
+    } else {
+      ({ error } = await sb.from('gastos_conductor').insert(payload));
+    }
+    if(error){ toast('No se pudo guardar el gasto: '+error.message,'err'); return; }
+    closeModal();
+    Conductor.renderGastos(esDescargue?'descargue':'viaje');
+    toast('Gasto guardado','ok');
+  },
+
+  /* ---- reporte de gastos ---- */
+  async generarReporte(){
+    const desde = document.getElementById('repc-desde').value;
+    const hasta = document.getElementById('repc-hasta').value;
+    const cond = State.session.auxiliar;
+    openModal(`
+      <h3>Firma tu reporte de gastos</h3>
+      <p class="small-note">Esta firma se agregará al final del reporte, encima de tu nombre, como firma del documento.</p>
+      <div class="field">
+        <div class="sigwrap"><canvas id="repc-sig-canvas"></canvas><span class="sig-hint">Firma aquí con el mouse o el dedo</span></div>
+        <div class="sig-actions"><button class="btn btn-ghost btn-sm" onclick="SignaturePads.repc.clear()">Borrar firma</button></div>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="Conductor._confirmarFirmaYGenerar('${desde||''}','${hasta||''}')">Confirmar firma y generar PDF</button>
+    `);
+    setTimeout(()=>{
+      SignaturePads.repc = new SigPad(document.getElementById('repc-sig-canvas'));
+      if(cond.firma_digital) SignaturePads.repc.loadFromDataURL(cond.firma_digital);
+    }, 30);
+  },
+  async _confirmarFirmaYGenerar(desde, hasta){
+    const firma = SignaturePads.repc ? SignaturePads.repc.toDataURL() : '';
+    if(!firma){ toast('Debes firmar antes de generar el reporte','err'); return; }
+    const cond = State.session.auxiliar;
+    closeModal();
+    const gastos = await Reportes._fetchGastos(cond.id, desde||null, hasta||null);
+    const html = Reportes.buildReporteGastosHTML(cond, gastos, desde||null, hasta||null, firma);
+    Reportes.mostrarPreview(html, `reporte_gastos_${cond.cedula}.pdf`);
   }
 };
 
@@ -1204,6 +1745,61 @@ const Reportes = {
     if(hasta) q = q.lte('fecha', hasta);
     const { data } = await q;
     return data||[];
+  },
+  async _fetchGastos(conductorId, desde, hasta){
+    let q = sb.from('gastos_conductor').select('*').eq('conductor_id', conductorId).order('fecha', {ascending:true});
+    if(desde) q = q.gte('fecha', desde);
+    if(hasta) q = q.lte('fecha', hasta);
+    const { data } = await q;
+    return data||[];
+  },
+  buildReporteGastosHTML(conductor, gastos, desde, hasta, firmaOverride){
+    const total = gastos.reduce((s,g)=>s+Number(g.valor||0),0);
+    const orden = [...TIPOS_GASTO_VIAJE, TIPO_GASTO_DESCARGUE];
+    const grupos = orden.map(tipo => ({ tipo, items: gastos.filter(g=>g.tipo_gasto===tipo) })).filter(gr=>gr.items.length);
+    const fechaHoy = fmtDate(todayISO());
+    const bloques = grupos.map(gr => {
+      const subtotal = gr.items.reduce((s,g)=>s+Number(g.valor||0),0);
+      const filas = gr.items.map(g => `
+        <tr>
+          <td>${fmtDate(g.fecha)}</td>
+          <td>${esc([g.placa!=='-'?g.placa:'', g.lugar||'', g.auxiliar_nombre||''].filter(Boolean).join(' · '))}</td>
+          <td>${esc(g.concepto||'-')}</td>
+          <td>${g.imagen?`<img src="${g.imagen}" style="max-width:90px;max-height:60px;object-fit:cover;border:1px solid #999;">`:'—'}</td>
+          <td style="text-align:right;">${money(g.valor)}</td>
+        </tr>`).join('');
+      return `
+        <div style="margin-bottom:16px;">
+          <div style="font-weight:bold;text-transform:uppercase;font-size:12.5px;margin-bottom:4px;">${esc(gr.tipo)}</div>
+          <table class="doc-table">
+            <thead><tr><th>Fecha</th><th>Detalle</th><th>Concepto</th><th>Soporte</th><th style="text-align:right;">Valor</th></tr></thead>
+            <tbody>${filas}</tbody>
+            <tfoot><tr class="doc-total-row"><td colspan="4">Subtotal ${esc(gr.tipo)}</td><td style="text-align:right;">${money(subtotal)}</td></tr></tfoot>
+          </table>
+        </div>`;
+    }).join('') || `<p>Sin gastos registrados en el periodo.</p>`;
+
+    return `
+    <div class="doc-page">
+      <div class="doc-fecha">${fechaHoy}</div>
+      <div class="doc-senores">Señores</div>
+      <div class="doc-empresa">LICONSUMAR DEL MAGDALENA S.A.S</div>
+      <div class="doc-nit">900.988.612-2</div>
+      <div class="doc-ref">Ref. informe de gastos de viaje</div>
+      <div class="doc-concepto"><b>${esc((conductor.nombre_completo||'').toUpperCase())}</b>, informe de gastos de viaje correspondiente al periodo del ${fmtDate(desde)||'—'} al ${fmtDate(hasta)||'—'}.</div>
+      ${bloques}
+      <table class="doc-table">
+        <tfoot><tr class="doc-total-row"><td>TOTAL GENERAL DE GASTOS</td><td style="text-align:right;">${money(total)}</td></tr></tfoot>
+      </table>
+      <div>Atentamente,</div>
+      <div class="doc-firma-block">
+        ${(firmaOverride||conductor.firma_digital)?`<img class="doc-firma-img" src="${firmaOverride||conductor.firma_digital}">`:'<div class="doc-line"></div>'}
+        <div><b>${esc(conductor.nombre_completo||'')}</b></div>
+        <div>C.C. ${esc(conductor.cedula||'')}</div>
+        <div>${esc(conductor.direccion||'')}</div>
+        <div>${esc(conductor.correo||'')}</div>
+      </div>
+    </div>`;
   },
   _columnas(){
     return (State.adminConfig.columnas_reporte && State.adminConfig.columnas_reporte.length) ? State.adminConfig.columnas_reporte : ['FECHA','PLACA','ACTIVIDAD','VALOR'];
@@ -1272,6 +1868,47 @@ const Reportes = {
     pdf.save(filename);
     root.innerHTML='';
   },
+  /* ---- vista previa amplia antes de generar el PDF (todos los roles) ---- */
+  _pendingHtml:null,
+  _pendingFilename:null,
+  mostrarPreview(html, filename){
+    Reportes._pendingHtml = html;
+    Reportes._pendingFilename = filename;
+    const frame = document.getElementById('preview-frame');
+    frame.innerHTML = html;
+    document.getElementById('preview-overlay').classList.add('show');
+    requestAnimationFrame(()=>{
+      const page = frame.firstElementChild;
+      if(page){
+        const avail = frame.clientWidth - 8;
+        const scale = Math.min(1, avail / page.offsetWidth);
+        page.style.transformOrigin = 'top center';
+        if(scale < 1){
+          page.style.transform = `scale(${scale})`;
+          frame.style.height = (page.offsetHeight * scale + 16) + 'px';
+        } else {
+          page.style.transform = '';
+          frame.style.height = '';
+        }
+      }
+    });
+    const btn = document.getElementById('preview-download-btn');
+    btn.disabled = false;
+    btn.textContent = 'Descargar PDF';
+    btn.onclick = async ()=>{
+      btn.disabled = true;
+      btn.textContent = 'Generando…';
+      await Reportes._exportNode(Reportes._pendingHtml, Reportes._pendingFilename);
+      Reportes.cerrarPreview();
+      toast('PDF generado','ok');
+    };
+  },
+  cerrarPreview(){
+    document.getElementById('preview-overlay').classList.remove('show');
+    document.getElementById('preview-frame').innerHTML = '';
+    Reportes._pendingHtml = null;
+    Reportes._pendingFilename = null;
+  },
   async generarAuxiliar(){
     const desde = document.getElementById('rep-desde').value;
     const hasta = document.getElementById('rep-hasta').value;
@@ -1283,35 +1920,21 @@ const Reportes = {
         <div class="sigwrap"><canvas id="rep-sig-canvas"></canvas><span class="sig-hint">Firma aquí con el mouse o el dedo</span></div>
         <div class="sig-actions"><button class="btn btn-ghost btn-sm" onclick="SignaturePads.rep.clear()">Borrar firma</button></div>
       </div>
-      <button class="btn btn-primary btn-block" onclick="Reportes._confirmarFirmaYPrevisualizar('${desde||''}','${hasta||''}')">Confirmar firma y previsualizar</button>
+      <button class="btn btn-primary btn-block" onclick="Reportes._confirmarFirmaYGenerar('${desde||''}','${hasta||''}')">Confirmar firma y generar PDF</button>
     `);
     setTimeout(()=>{
       SignaturePads.rep = new SigPad(document.getElementById('rep-sig-canvas'));
       if(aux.firma_digital) SignaturePads.rep.loadFromDataURL(aux.firma_digital);
     }, 30);
   },
-  async _confirmarFirmaYPrevisualizar(desde, hasta){
+  async _confirmarFirmaYGenerar(desde, hasta){
     const firma = SignaturePads.rep ? SignaturePads.rep.toDataURL() : '';
     if(!firma){ toast('Debes firmar antes de generar el reporte','err'); return; }
     const aux = State.session.auxiliar;
     closeModal();
     const registros = await Reportes._fetchRegistros(aux.id, desde||null, hasta||null);
     const html = Reportes.buildCuentaCobroHTML(aux, registros, desde||null, hasta||null, firma);
-    Reportes._pendingAux = { html, filename: `cuenta_de_cobro_${aux.cedula}.pdf` };
-    document.getElementById('preview-aux-frame').innerHTML = html;
-    document.getElementById('preview-aux-card').classList.remove('hidden');
-    document.getElementById('preview-aux-card').scrollIntoView({behavior:'smooth', block:'start'});
-    toast('Previsualización lista','ok');
-  },
-  async confirmarDescargaAux(){
-    if(!Reportes._pendingAux){ toast('Primero genera la previsualización','err'); return; }
-    await Reportes._exportNode(Reportes._pendingAux.html, Reportes._pendingAux.filename);
-    toast('PDF generado','ok');
-  },
-  cerrarPreviewAux(){
-    Reportes._pendingAux = null;
-    document.getElementById('preview-aux-frame').innerHTML = '';
-    document.getElementById('preview-aux-card').classList.add('hidden');
+    Reportes.mostrarPreview(html, `cuenta_de_cobro_${aux.cedula}.pdf`);
   },
   async generarAdmin(){
     const auxId = document.getElementById('admrep-auxiliar').value;
@@ -1321,21 +1944,7 @@ const Reportes = {
     const aux = State.auxiliaresCache.find(a=>a.id===auxId);
     const registros = await Reportes._fetchRegistros(auxId, desde, hasta);
     const html = Reportes.buildCuentaCobroHTML(aux, registros, desde, hasta);
-    Reportes._pendingAdmin = { html, filename: `cuenta_de_cobro_${aux.cedula}.pdf` };
-    document.getElementById('preview-admin-frame').innerHTML = html;
-    document.getElementById('preview-admin-card').classList.remove('hidden');
-    document.getElementById('preview-admin-card').scrollIntoView({behavior:'smooth', block:'start'});
-    toast('Previsualización lista','ok');
-  },
-  async confirmarDescargaAdmin(){
-    if(!Reportes._pendingAdmin){ toast('Primero genera la previsualización','err'); return; }
-    await Reportes._exportNode(Reportes._pendingAdmin.html, Reportes._pendingAdmin.filename);
-    toast('PDF generado','ok');
-  },
-  cerrarPreviewAdmin(){
-    Reportes._pendingAdmin = null;
-    document.getElementById('preview-admin-frame').innerHTML = '';
-    document.getElementById('preview-admin-card').classList.add('hidden');
+    Reportes.mostrarPreview(html, `cuenta_de_cobro_${aux.cedula}.pdf`);
   }
 };
 
@@ -1367,6 +1976,25 @@ const AdminMod = {
   },
   fillConfig(){
     document.getElementById('cols-actuales').textContent = (State.adminConfig.columnas_reporte||[]).join(' · ');
+    AdminMod.generarQR();
+  },
+  generarQR(){
+    const url = location.origin + location.pathname + '?registro-rapido=1';
+    const txt = document.getElementById('qr-url-text');
+    if(txt) txt.textContent = url;
+    const canvas = document.getElementById('qr-canvas');
+    if(!canvas || typeof QRCode==='undefined') return;
+    QRCode.toCanvas(canvas, url, {width:220, margin:1}, function(err){
+      if(err){ toast('No se pudo generar el QR','err'); }
+    });
+  },
+  descargarQR(){
+    const canvas = document.getElementById('qr-canvas');
+    if(!canvas || !canvas.width){ toast('Primero genera el QR','err'); return; }
+    const link = document.createElement('a');
+    link.download = 'qr_registro_rapido_liconsumar.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
   },
   async cargarPlantilla(){
     const file = document.getElementById('plantilla-file').files[0];
@@ -1493,8 +2121,137 @@ const AdminMod = {
     const a = State.auxiliaresCache.find(x=>x.id===auxId);
     const registros = await Reportes._fetchRegistros(auxId, null, null);
     const html = Reportes.buildCuentaCobroHTML(a, registros, registros[0]?.fecha, registros[registros.length-1]?.fecha);
-    await Reportes._exportNode(html, `registro_${a.cedula}.pdf`);
-    toast('PDF generado','ok');
+    Reportes.mostrarPreview(html, `registro_${a.cedula}.pdf`);
+  },
+  async renderConductores(){
+    const { data } = await sb.from('conductores_app').select('*').order('created_at',{ascending:false});
+    State.conductoresAppCache = data||[];
+    const tbody = document.querySelector('#tabla-conductores tbody');
+    tbody.innerHTML = State.conductoresAppCache.map(c=>`
+      <tr>
+        <td>${esc(c.nombre_completo)||'<span class="small-note">Sin completar</span>'}</td>
+        <td class="mono">${esc(c.cedula)}</td>
+        <td>${esc(c.telefono)||'-'}</td>
+        <td><button class="btn btn-navy btn-sm" onclick="AdminMod.verConductor('${c.id}')">Ver</button></td>
+      </tr>`).join('') || `<tr><td colspan="4" class="empty-state">Sin conductores registrados</td></tr>`;
+  },
+  async verConductor(id){
+    State.condDetalleAbierto = id;
+    const c = State.conductoresAppCache.find(x=>x.id===id);
+    const { data: gastos } = await sb.from('gastos_conductor').select('*').eq('conductor_id', id).order('fecha',{ascending:false});
+    const lista = gastos||[];
+    const total = lista.reduce((s,g)=>s+Number(g.valor||0),0);
+    const box = document.getElementById('conductor-detalle');
+    box.innerHTML = `
+      <div class="card">
+        <h3>Perfil de ${esc(c.nombre_completo||c.cedula)}</h3>
+        <div class="grid2">
+          <div class="field"><label>Nombre completo</label><input id="dc-nombre" value="${esc(c.nombre_completo)}"></div>
+          <div class="field"><label>Cédula</label><input id="dc-cedula" value="${esc(c.cedula)}" disabled></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Teléfono</label><input id="dc-telefono" value="${esc(c.telefono)}"></div>
+          <div class="field"><label>Correo</label><input id="dc-correo" value="${esc(c.correo)}"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Dirección</label><input id="dc-direccion" value="${esc(c.direccion)}"></div>
+          <div class="field"><label>Contraseña (4 dígitos)</label><input id="dc-pass" value="${esc(c.password)}" class="mono"></div>
+        </div>
+        ${c.firma_digital?`<div class="field"><label>Firma registrada</label><img src="${c.firma_digital}" style="max-width:220px;border:1px solid var(--line);border-radius:6px;background:#fff;"></div>`:''}
+        <button class="btn btn-navy btn-sm" onclick="AdminMod.guardarPerfilCond('${id}')">Guardar cambios</button>
+      </div>
+      <div class="card">
+        <h3>Reporte de gastos</h3>
+        <div class="grid2">
+          <div class="field"><label>Desde</label><input type="date" id="dc-rep-desde"></div>
+          <div class="field"><label>Hasta</label><input type="date" id="dc-rep-hasta"></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="AdminMod.pdfConductor('${id}')">Generar PDF del periodo</button>
+      </div>
+      <div class="card">
+        <h3>Gastos registrados (${lista.length}) · Total acumulado: ${money(total)}</h3>
+        <table class="datatable">
+          <thead><tr><th>Fecha</th><th>Tipo</th><th>Placa</th><th>Auxiliar</th><th>Lugar</th><th>Concepto</th><th>Valor</th><th>Soporte</th><th></th></tr></thead>
+          <tbody>
+            ${lista.map(g=>`
+              <tr>
+                <td>${fmtDate(g.fecha)}</td>
+                <td>${esc(g.tipo_gasto)}</td>
+                <td>${esc(g.placa||'-')}</td>
+                <td>${esc(g.auxiliar_nombre||'-')}</td>
+                <td>${esc(g.lugar||'-')}</td>
+                <td>${esc(g.concepto||'-')}</td>
+                <td class="mono">${money(g.valor)}</td>
+                <td>${g.imagen?`<a href="${g.imagen}" target="_blank">Ver</a>`:'-'}</td>
+                <td style="white-space:nowrap;">
+                  <button class="btn btn-ghost btn-sm" onclick="AdminMod.editarGastoConductor('${g.id}','${id}')">Editar</button>
+                  <button class="btn btn-danger btn-sm" onclick="AdminMod.eliminarGastoConductor('${g.id}','${id}')">Eliminar</button>
+                </td>
+              </tr>`).join('') || `<tr><td colspan="9" class="empty-state">Sin gastos registrados</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    `;
+  },
+  async guardarPerfilCond(id){
+    const payload = {
+      nombre_completo: document.getElementById('dc-nombre').value.trim(),
+      telefono: document.getElementById('dc-telefono').value.trim(),
+      correo: document.getElementById('dc-correo').value.trim(),
+      direccion: document.getElementById('dc-direccion').value.trim(),
+      password: document.getElementById('dc-pass').value.trim()
+    };
+    const { error } = await sb.from('conductores_app').update(payload).eq('id', id);
+    if(error){ toast('No se pudo guardar','err'); return; }
+    await AdminMod.renderConductores();
+    toast('Perfil actualizado','ok');
+  },
+  async eliminarGastoConductor(gastoId, condId){
+    if(!confirm('¿Eliminar este gasto?')) return;
+    await sb.from('gastos_conductor').delete().eq('id', gastoId);
+    AdminMod.verConductor(condId);
+    toast('Gasto eliminado','ok');
+  },
+  async editarGastoConductor(gastoId, condId){
+    const { data: g } = await sb.from('gastos_conductor').select('*').eq('id', gastoId).maybeSingle();
+    if(!g) return;
+    openModal(`
+      <h3>Editar gasto</h3>
+      <div class="grid2">
+        <div class="field"><label>Fecha</label><input type="date" id="eg-fecha" value="${g.fecha}"></div>
+        <div class="field"><label>Placa</label><input id="eg-placa" value="${esc(g.placa||'')}"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Auxiliar</label><input id="eg-auxiliar" value="${esc(g.auxiliar_nombre||'')}"></div>
+        <div class="field"><label>Lugar</label><input id="eg-lugar" value="${esc(g.lugar||'')}"></div>
+      </div>
+      <div class="field"><label>Concepto</label><input id="eg-concepto" value="${esc(g.concepto||'')}"></div>
+      <div class="field"><label>Valor</label><input type="number" id="eg-valor" value="${g.valor}"></div>
+      <button class="btn btn-primary btn-block" onclick="AdminMod.guardarEdicionGasto('${gastoId}','${condId}')">Guardar cambios</button>
+    `);
+  },
+  async guardarEdicionGasto(gastoId, condId){
+    const payload = {
+      fecha: document.getElementById('eg-fecha').value,
+      placa: document.getElementById('eg-placa').value.trim(),
+      auxiliar_nombre: document.getElementById('eg-auxiliar').value.trim() || null,
+      lugar: document.getElementById('eg-lugar').value.trim() || null,
+      concepto: document.getElementById('eg-concepto').value.trim() || null,
+      valor: Number(document.getElementById('eg-valor').value)||0
+    };
+    const { error } = await sb.from('gastos_conductor').update(payload).eq('id', gastoId);
+    if(error){ toast('No se pudo guardar','err'); return; }
+    closeModal();
+    AdminMod.verConductor(condId);
+    toast('Gasto actualizado','ok');
+  },
+  async pdfConductor(condId){
+    const c = State.conductoresAppCache.find(x=>x.id===condId);
+    const desde = document.getElementById('dc-rep-desde').value;
+    const hasta = document.getElementById('dc-rep-hasta').value;
+    const gastos = await Reportes._fetchGastos(condId, desde||null, hasta||null);
+    const html = Reportes.buildReporteGastosHTML(c, gastos, desde||null, hasta||null);
+    Reportes.mostrarPreview(html, `reporte_gastos_${c.cedula}.pdf`);
   },
   fillAuxSelect(){
     const sel = document.getElementById('admrep-auxiliar');
@@ -1509,37 +2266,55 @@ const AdminMod = {
 };
 
 /* ============================================================
-   QR · REGISTRO RÁPIDO (kiosco)
+   REGISTRO RÁPIDO POR QR (sin iniciar sesión)
    ============================================================ */
-const QRGen = {
-  async generar(){
-    const url = document.getElementById('qr-url').value.trim();
-    if(!url){ toast('Pega la URL donde publicaste registro-rapido.html','err'); return; }
-    if(!/^https?:\/\//i.test(url)){ toast('La URL debe empezar con http:// o https://','err'); return; }
-    const wrap = document.getElementById('qr-canvas-wrap');
-    wrap.innerHTML = '<canvas id="qr-canvas"></canvas>';
-    try{
-      await QRCode.toCanvas(document.getElementById('qr-canvas'), url, { width: 260, margin: 2, color:{dark:'#12283f', light:'#ffffff'} });
-      document.getElementById('qr-download-btn').classList.remove('hidden');
-      toast('QR generado','ok');
-    }catch(e){
-      toast('No se pudo generar el QR','err');
-    }
+const QuickRegistro = {
+  auxiliar: null,
+  async buscar(){
+    const cedula = document.getElementById('qr-cedula').value.trim();
+    if(!cedula){ toast('Ingresa tu número de cédula','err'); return; }
+    const { data, error } = await sb.from('auxiliares').select('*').eq('cedula', cedula).maybeSingle();
+    if(error || !data){ toast('No encontramos esa cédula. Verifica el número o crea tu cuenta desde la app.','err'); return; }
+    if(!data.nombre_completo){ toast('Tu perfil aún no está completo. Ingresa a la app con tu cédula y contraseña para completarlo primero.','err'); return; }
+    QuickRegistro.auxiliar = data;
+    document.getElementById('qr-found-name').textContent = data.nombre_completo;
+    document.getElementById('qr-found-cc').textContent = 'CC ' + data.cedula;
+    document.getElementById('qr-step-cedula').classList.add('hidden');
+    document.getElementById('qr-found').classList.remove('hidden');
+    document.getElementById('qr-success').classList.add('hidden');
   },
-  descargar(){
-    const canvas = document.getElementById('qr-canvas');
-    if(!canvas){ return; }
-    const link = document.createElement('a');
-    link.download = 'qr-registro-rapido.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+  abrirFormulario(){
+    if(!QuickRegistro.auxiliar) return;
+    State.session = { tipo:'quick', auxiliar: QuickRegistro.auxiliar };
+    Aux.openRegistroForm();
+  },
+  onSaved(){
+    document.getElementById('qr-found').classList.add('hidden');
+    document.getElementById('qr-step-cedula').classList.add('hidden');
+    document.getElementById('qr-success').classList.remove('hidden');
+  },
+  reset(){
+    QuickRegistro.auxiliar = null;
+    document.getElementById('qr-cedula').value = '';
+    document.getElementById('qr-step-cedula').classList.remove('hidden');
+    document.getElementById('qr-found').classList.add('hidden');
+    document.getElementById('qr-success').classList.add('hidden');
   }
 };
 
 /* ============================================================
    INIT
    ============================================================ */
-Bootstrap.tryRestore();
+(function initEntry(){
+  const params = new URLSearchParams(location.search);
+  if(params.has('registro-rapido')){
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('quick-screen').classList.add('show');
+    Catalogos.loadAll();
+  } else {
+    Bootstrap.tryRestore();
+  }
+})();
 </script>
 </body>
 </html>
