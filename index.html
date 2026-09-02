@@ -612,6 +612,17 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="inline-add"><input id="new-lugar" placeholder="Ej. Fundación"><button class="btn btn-navy btn-sm" onclick="Catalogos.add('lugares_gasto','nombre','new-lugar')">Agregar</button></div>
           <p class="small-note">Estas opciones aparecen como "Lugar" en los gastos de viaje registrados por los conductores.</p>
         </div>
+        <div class="card">
+          <h3>Productos (estampillado)</h3>
+          <ul class="catalog-list" id="cat-productos"></ul>
+          <div class="inline-add"><input id="new-producto" placeholder="Nombre del producto"><button class="btn btn-navy btn-sm" onclick="Catalogos.add('productos','nombre','new-producto')">Agregar</button></div>
+          <p class="small-note">Estos productos aparecen en la lista desplegable cuando el auxiliar registra un día como "Estampillado".</p>
+          <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px;">
+            <label style="display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;">Cargar listado desde Excel (solo columna "Nombre de producto")</label>
+            <input type="file" id="productos-file" accept=".xlsx,.xls">
+            <button class="btn btn-navy btn-sm" style="margin-top:8px;" onclick="Catalogos.cargarProductosExcel()">Cargar productos</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -631,6 +642,23 @@ table.datatable tr:last-child td{border-bottom:none;}
         <table class="datatable" id="tabla-conductores"><thead><tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th></th></tr></thead><tbody></tbody></table>
       </div>
       <div id="conductor-detalle"></div>
+    </div>
+
+    <!-- ===== ADMIN: ESTAMPILLADO ===== -->
+    <div class="view" id="view-estampillado">
+      <div class="card" style="max-width:600px;">
+        <h3>Consultar estampillado por fecha</h3>
+        <p class="small-note" style="margin-top:-6px;">Selecciona el rango de fechas para ver qué auxiliares estampillaron en ese periodo.</p>
+        <div class="grid2">
+          <div class="field"><label>Desde</label><input type="date" id="est-desde"></div>
+          <div class="field"><label>Hasta</label><input type="date" id="est-hasta"></div>
+        </div>
+        <button class="btn btn-primary" onclick="EstampilladoMod.consultar()">Consultar</button>
+      </div>
+      <div class="card">
+        <h3>Auxiliares que estampillaron en el rango</h3>
+        <div id="est-resultados"><div class="empty-state">Selecciona un rango de fechas y presiona "Consultar".</div></div>
+      </div>
     </div>
 
     <!-- ===== ADMIN: REPORTES ===== -->
@@ -723,7 +751,7 @@ const CARGUE_POBLACIONES = 'CARGUE POBLACIONES';
 const CARGUE_POBLACIONES_VALOR = 28000;
 const State = {
   session: null,           // {tipo:'auxiliar'|'admin', auxiliar:{...}}
-  catalogos: { placas:[], conductores:[], tipos_servicio:[], ciudades:[], lugares:[] },
+  catalogos: { placas:[], conductores:[], tipos_servicio:[], ciudades:[], lugares:[], productos:[] },
   adminConfig: { password:'1234', columnas_reporte:['FECHA','PLACA','ACTIVIDAD','VALOR'] },
   registrosCache: [],
   auxiliaresCache: [],
@@ -907,6 +935,7 @@ const UI = {
         <button class="nav-item" data-v="catalogos" onclick="UI.goTo('catalogos')">Catálogos</button>
         <button class="nav-item" data-v="auxiliares" onclick="UI.goTo('auxiliares')">Auxiliares</button>
         <button class="nav-item" data-v="conductores-admin" onclick="UI.goTo('conductores-admin')">Conductores</button>
+        <button class="nav-item" data-v="estampillado" onclick="UI.goTo('estampillado')">Estampillado</button>
         <button class="nav-item" data-v="reportes-admin" onclick="UI.goTo('reportes-admin')">Reportes</button>
         <button class="nav-item" data-v="config" onclick="UI.goTo('config')">Configuración</button>
       `;
@@ -939,6 +968,7 @@ const UI = {
       catalogos:['Catálogos','Placas, conductores, tipos de servicio, ciudades y lugares'],
       auxiliares:['Auxiliares','Perfiles, registros y descuentos'],
       'conductores-admin':['Conductores','Perfiles y reportes de gastos de viaje'],
+      estampillado:['Estampillado','Consulta por fechas qué auxiliares estampillaron y corrige cantidades'],
       'reportes-admin':['Reportes','Genera la cuenta de cobro de cualquier auxiliar'],
       config:['Configuración','Clave de acceso y plantilla de reporte']
     };
@@ -953,6 +983,7 @@ const UI = {
     if(view==='catalogos') Catalogos.renderAll();
     if(view==='auxiliares') AdminMod.renderAuxiliares();
     if(view==='conductores-admin') AdminMod.renderConductores();
+    if(view==='estampillado') EstampilladoMod.init();
     if(view==='reportes-admin') AdminMod.fillAuxSelect();
     if(view==='config') AdminMod.fillConfig();
   }
@@ -1103,18 +1134,20 @@ const Bootstrap = {
    ============================================================ */
 const Catalogos = {
   async loadAll(){
-    const [p,c,t,ci,lg] = await Promise.all([
+    const [p,c,t,ci,lg,pr] = await Promise.all([
       sb.from('placas').select('*').order('placa'),
       sb.from('conductores').select('*').order('nombre'),
       sb.from('tipos_servicio').select('*').order('nombre'),
       sb.from('ciudades').select('*').order('nombre'),
-      sb.from('lugares_gasto').select('*').order('nombre')
+      sb.from('lugares_gasto').select('*').order('nombre'),
+      sb.from('productos').select('*').order('nombre')
     ]);
     State.catalogos.placas = p.data||[];
     State.catalogos.conductores = c.data||[];
     State.catalogos.tipos_servicio = t.data||[];
     State.catalogos.ciudades = ci.data||[];
     State.catalogos.lugares = lg.data||[];
+    State.catalogos.productos = pr.data||[];
     await Catalogos._ensureCarguePoblaciones();
     await Catalogos._ensureLugaresBase();
   },
@@ -1174,6 +1207,36 @@ const Catalogos = {
     await Catalogos.loadAll();
     toast('Valor actualizado','ok');
   },
+  async cargarProductosExcel(){
+    const fileInput = document.getElementById('productos-file');
+    const file = fileInput.files[0];
+    if(!file){ toast('Selecciona un archivo Excel','err'); return; }
+    let rows;
+    try{
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(ws, {header:1});
+    }catch(e){
+      toast('No se pudo leer el archivo','err'); return;
+    }
+    if(!rows || !rows.length){ toast('El archivo está vacío','err'); return; }
+    let startIdx = 0;
+    if(rows[0] && rows[0].some(cell => String(cell||'').toUpperCase().includes('NOMBRE') || String(cell||'').toUpperCase().includes('PRODUCTO'))){
+      startIdx = 1;
+    }
+    const nombres = rows.slice(startIdx).map(r => String((r&&r[0])||'').trim()).filter(Boolean);
+    if(!nombres.length){ toast('No se encontraron nombres de producto en el archivo','err'); return; }
+    const existentes = new Set(State.catalogos.productos.map(p=>(p.nombre||'').trim().toLowerCase()));
+    const unicos = [...new Set(nombres.map(n=>n))].filter(n=>!existentes.has(n.trim().toLowerCase()));
+    if(!unicos.length){ toast('Todos esos productos ya existían en el catálogo','err'); return; }
+    const { error } = await sb.from('productos').insert(unicos.map(nombre=>({nombre})));
+    if(error){ toast('No se pudo cargar el listado de productos','err'); return; }
+    fileInput.value = '';
+    await Catalogos.loadAll();
+    Catalogos.renderAll();
+    toast(`${unicos.length} producto(s) agregado(s) al catálogo`,'ok');
+  },
   renderAll(){
     const mk = (arr, table, withVal) => arr.map(it=>`
       <li>
@@ -1188,6 +1251,7 @@ const Catalogos = {
     document.getElementById('cat-servicios').innerHTML = mk(State.catalogos.tipos_servicio,'tipos_servicio',false);
     document.getElementById('cat-ciudades').innerHTML = mk(State.catalogos.ciudades,'ciudades',false);
     document.getElementById('cat-lugares').innerHTML = mk(State.catalogos.lugares,'lugares_gasto',false);
+    document.getElementById('cat-productos').innerHTML = mk(State.catalogos.productos,'productos',false);
   }
 };
 
@@ -1304,6 +1368,7 @@ const Aux = {
         <select id="rf-concepto" onchange="Aux._onConceptoChange()">
           <option value="Ruta" ${conceptoActual==='Ruta'?'selected':''}>Ruta</option>
           <option value="Estampillado" ${conceptoActual==='Estampillado'?'selected':''}>Estampillado</option>
+          <option value="Cargue" ${conceptoActual==='Cargue'?'selected':''}>Cargue</option>
         </select>
       </div>
 
@@ -1313,7 +1378,7 @@ const Aux = {
             <select id="rf-tiposervicio" onchange="Aux._maybeInlineAdd('tiposervicio'); Aux._recalcValor();">${opts(State.catalogos.tipos_servicio,'nombre', editing?editing.tipo_servicio:null)}</select>
             <div class="inline-add hidden" id="add-tiposervicio-wrap"><input id="add-tiposervicio-input" placeholder="Nuevo tipo de ruta"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSave('tipos_servicio','nombre','add-tiposervicio-input','rf-tiposervicio')">Guardar</button></div>
           </div>
-          <div class="field"><label>Conductor</label>
+          <div class="field" id="conductor-field-wrap"><label>Conductor</label>
             <select id="rf-conductor" onchange="Aux._maybeInlineAdd('conductor'); Aux._recalcValor();">${conductorOpts(editing?editing.conductor:null)}</select>
             <div class="inline-add hidden" id="add-conductor-wrap"><input id="add-conductor-input" placeholder="Nuevo conductor"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSaveConductor()">Guardar</button></div>
           </div>
@@ -1343,8 +1408,10 @@ const Aux = {
       SignaturePads.rf = new SigPad(document.getElementById('rf-sig-canvas'));
       if(editing && editing.firma) SignaturePads.rf.loadFromDataURL(editing.firma);
       const esEstampillado = conceptoActual==='Estampillado';
+      const esCargue = conceptoActual==='Cargue';
       document.getElementById('estampillado-block').classList.toggle('hidden', !esEstampillado);
       document.getElementById('ruta-block').classList.toggle('hidden', esEstampillado);
+      document.getElementById('conductor-field-wrap').classList.toggle('hidden', esCargue);
       if(esEstampillado && !State.productosEstampillado.length){ State.productosEstampillado=[{referencia:'',cantidad:1}]; }
       Aux._renderProductoRows();
       if(!editing) Aux._recalcValor();
@@ -1386,9 +1453,12 @@ const Aux = {
     toast('Conductor agregado (valor $80.000)','ok');
   },
   _onConceptoChange(){
-    const esEstampillado = document.getElementById('rf-concepto').value==='Estampillado';
+    const concepto = document.getElementById('rf-concepto').value;
+    const esEstampillado = concepto==='Estampillado';
+    const esCargue = concepto==='Cargue';
     document.getElementById('estampillado-block').classList.toggle('hidden', !esEstampillado);
     document.getElementById('ruta-block').classList.toggle('hidden', esEstampillado);
+    document.getElementById('conductor-field-wrap').classList.toggle('hidden', esCargue);
     if(esEstampillado && !State.productosEstampillado.length){ State.productosEstampillado=[{referencia:'',cantidad:1}]; Aux._renderProductoRows(); }
     Aux._recalcValor();
   },
@@ -1397,6 +1467,8 @@ const Aux = {
     let valor = 0;
     if(concepto==='Estampillado'){
       valor = State.productosEstampillado.reduce((s,p)=> s + (Number(p.cantidad)||0)*28, 0);
+    } else if(concepto==='Cargue'){
+      valor = CARGUE_POBLACIONES_VALOR;
     } else {
       const tiposervicioEl = document.getElementById('rf-tiposervicio');
       const tipoServicio = tiposervicioEl ? tiposervicioEl.value : '';
@@ -1422,12 +1494,18 @@ const Aux = {
   _renderProductoRows(){
     const wrap = document.getElementById('productos-rows');
     if(!wrap) return;
+    const prodOpts = (current) => `<option value="">Selecciona un producto…</option>` +
+      State.catalogos.productos.map(p=>`<option value="${esc(p.nombre)}" ${current===p.nombre?'selected':''}>${esc(p.nombre)}</option>`).join('') +
+      (current && !State.catalogos.productos.some(p=>p.nombre===current) ? `<option value="${esc(current)}" selected>${esc(current)}</option>` : '');
     wrap.innerHTML = State.productosEstampillado.map((p,i)=>`
       <div class="product-row">
-        <input placeholder="Referencia / producto" value="${esc(p.referencia)}" oninput="State.productosEstampillado[${i}].referencia=this.value">
+        <select onchange="State.productosEstampillado[${i}].referencia=this.value">${prodOpts(p.referencia)}</select>
         <input type="number" min="1" placeholder="Cant." value="${p.cantidad}" oninput="State.productosEstampillado[${i}].cantidad=this.value; Aux._recalcValor();">
         <button class="btn btn-danger btn-sm" onclick="Aux._removeProductoRow(${i})">✕</button>
       </div>`).join('');
+    if(!State.catalogos.productos.length){
+      wrap.innerHTML += '<p class="small-note">No hay productos cargados. Pide al administrador que los agregue en Catálogos.</p>';
+    }
   },
   _removeProductoRow(i){
     State.productosEstampillado.splice(i,1);
@@ -1440,18 +1518,20 @@ const Aux = {
     const concepto = document.getElementById('rf-concepto').value;
     const ciudad = document.getElementById('rf-ciudad').value;
     const esEstampillado = concepto==='Estampillado';
+    const esCargue = concepto==='Cargue';
 
     let conductor = 'Ninguno', tipo_servicio = '-';
     if(!esEstampillado){
-      conductor = document.getElementById('rf-conductor').value;
       tipo_servicio = document.getElementById('rf-tiposervicio').value;
+      conductor = esCargue ? 'Ninguno' : document.getElementById('rf-conductor').value;
     }
 
-    if([placa,ciudad].includes('__nuevo__') || (!esEstampillado && [conductor,tipo_servicio].includes('__nuevo__'))){
+    if([placa,ciudad].includes('__nuevo__') || (!esEstampillado && tipo_servicio==='__nuevo__') || (!esEstampillado && !esCargue && conductor==='__nuevo__')){
       toast('Guarda las opciones nuevas antes de continuar','err'); return;
     }
     if(!fecha || !placa || !ciudad){ toast('Completa todos los campos','err'); return; }
-    if(!esEstampillado && (!conductor || !tipo_servicio)){ toast('Completa el tipo de ruta y el conductor','err'); return; }
+    if(!esEstampillado && !tipo_servicio){ toast('Completa el tipo de ruta','err'); return; }
+    if(!esEstampillado && !esCargue && !conductor){ toast('Completa el conductor','err'); return; }
 
     let productos = [];
     if(esEstampillado){
@@ -1808,7 +1888,7 @@ const Reportes = {
     const c = col.toUpperCase();
     if(c.includes('FECHA')) return fmtDate(r.fecha);
     if(c.includes('PLACA')) return r.placa||'-';
-    if(c.includes('ACTIV')) return r.actividad||'';
+    if(c.includes('ACTIV')) return r.concepto==='Estampillado' ? 'PRODUCTOS VARIOS' : (r.actividad||'');
     if(c.includes('VALOR')) return money(r.valor);
     if(c.includes('COND')) return r.conductor||'-';
     if(c.includes('CIUDAD') || c.includes('POBLA')) return r.ciudad||'-';
@@ -2262,6 +2342,121 @@ const AdminMod = {
         sel.innerHTML = '<option value="">Selecciona…</option>' + State.auxiliaresCache.map(a=>`<option value="${a.id}">${esc(a.nombre_completo||a.cedula)} (CC ${esc(a.cedula)})</option>`).join('');
       });
     }
+  }
+};
+
+/* ============================================================
+   ADMIN: PESTAÑA ESTAMPILLADO (consulta por fecha, discriminado)
+   ============================================================ */
+const EstampilladoMod = {
+  _desde: null,
+  _hasta: null,
+  _grupos: {},
+  async init(){
+    if(!State.auxiliaresCache.length){
+      const { data } = await sb.from('auxiliares').select('*');
+      State.auxiliaresCache = data||[];
+    }
+  },
+  async consultar(){
+    const desde = document.getElementById('est-desde').value;
+    const hasta = document.getElementById('est-hasta').value;
+    if(!desde || !hasta){ toast('Selecciona el rango de fechas','err'); return; }
+    const { data, error } = await sb.from('registros').select('*').eq('concepto','Estampillado').gte('fecha', desde).lte('fecha', hasta).order('fecha', {ascending:true});
+    if(error){ toast('No se pudo consultar','err'); return; }
+    if(!State.auxiliaresCache.length){
+      const { data: axs } = await sb.from('auxiliares').select('*');
+      State.auxiliaresCache = axs||[];
+    }
+    const registros = data||[];
+    const grupos = {};
+    registros.forEach(r=>{
+      if(!grupos[r.auxiliar_id]) grupos[r.auxiliar_id] = [];
+      grupos[r.auxiliar_id].push(r);
+    });
+    EstampilladoMod._desde = desde;
+    EstampilladoMod._hasta = hasta;
+    EstampilladoMod._grupos = grupos;
+    const wrap = document.getElementById('est-resultados');
+    const ids = Object.keys(grupos);
+    if(!ids.length){
+      wrap.innerHTML = '<div class="empty-state">Ningún auxiliar estampilló en ese rango de fechas.</div>';
+      return;
+    }
+    wrap.innerHTML = `
+      <table class="datatable">
+        <thead><tr><th>Auxiliar</th><th>Cédula</th><th>Registros</th><th>Total estampillas</th><th>Valor total</th><th></th></tr></thead>
+        <tbody>
+          ${ids.map(id=>{
+            const aux = State.auxiliaresCache.find(a=>a.id===id) || {};
+            const items = grupos[id];
+            const totalCant = items.reduce((s,r)=>s+(r.productos||[]).reduce((s2,p)=>s2+(Number(p.cantidad)||0),0),0);
+            const totalValor = items.reduce((s,r)=>s+Number(r.valor||0),0);
+            return `<tr>
+              <td>${esc(aux.nombre_completo||'Sin nombre')}</td>
+              <td class="mono">${esc(aux.cedula||'-')}</td>
+              <td>${items.length}</td>
+              <td>${totalCant}</td>
+              <td class="mono">${money(totalValor)}</td>
+              <td><button class="btn btn-navy btn-sm" onclick="EstampilladoMod.verDetalle('${id}')">Ver detalle</button></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  },
+  verDetalle(auxId){
+    const items = (EstampilladoMod._grupos[auxId]||[]).slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+    const aux = State.auxiliaresCache.find(a=>a.id===auxId) || {};
+    const agregados = {};
+    items.forEach(r=>(r.productos||[]).forEach(p=>{
+      const key = p.referencia || '—';
+      agregados[key] = (agregados[key]||0) + (Number(p.cantidad)||0);
+    }));
+    const refsOrdenadas = Object.keys(agregados).sort();
+    const filasAgregadas = refsOrdenadas.map(ref=>`
+      <tr><td>${esc(ref)}</td><td>${agregados[ref]}</td><td class="mono">${money(agregados[ref]*28)}</td></tr>`).join('');
+    const filasRegistros = items.map(r=>`
+      <div class="card" style="padding:14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-weight:600;font-size:13px;margin-bottom:8px;">
+          <span>${fmtDate(r.fecha)} · ${esc(r.placa||'-')} · ${esc(r.ciudad||'-')}</span>
+          <span class="mono">${money(r.valor)}</span>
+        </div>
+        <table class="datatable">
+          <thead><tr><th>Referencia</th><th>Cantidad</th><th>Valor</th></tr></thead>
+          <tbody>
+            ${(r.productos||[]).map((p,i)=>`
+              <tr>
+                <td>${esc(p.referencia)}</td>
+                <td><input type="number" min="1" class="mono" style="width:70px;padding:4px 6px;border:1px solid var(--line-strong);border-radius:5px;" value="${p.cantidad}" onchange="EstampilladoMod.corregirCantidad('${r.id}','${auxId}',${i},this.value)"></td>
+                <td class="mono">${money((Number(p.cantidad)||0)*28)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`).join('') || '<p class="small-note">Sin registros.</p>';
+    openModal(`
+      <h3>Estampillado de ${esc(aux.nombre_completo||'—')}</h3>
+      <p class="small-note">Del ${fmtDate(EstampilladoMod._desde)} al ${fmtDate(EstampilladoMod._hasta)} · CC ${esc(aux.cedula||'-')}</p>
+      <h3 style="margin-top:18px;">Totales por referencia en el rango</h3>
+      <table class="datatable">
+        <thead><tr><th>Referencia</th><th>Cantidad total</th><th>Valor</th></tr></thead>
+        <tbody>${filasAgregadas || '<tr><td colspan="3" class="empty-state">Sin productos</td></tr>'}</tbody>
+      </table>
+      <h3 style="margin-top:18px;">Registros individuales (corrige la cantidad si hay algún error)</h3>
+      ${filasRegistros}
+    `);
+  },
+  async corregirCantidad(registroId, auxId, idx, nuevaCantidad){
+    const reg = (EstampilladoMod._grupos[auxId]||[]).find(r=>r.id===registroId);
+    if(!reg) return;
+    const productos = JSON.parse(JSON.stringify(reg.productos||[]));
+    productos[idx].cantidad = Number(nuevaCantidad)||0;
+    const nuevoValor = productos.reduce((s,p)=>s+(Number(p.cantidad)||0)*28,0);
+    const nuevaActividad = 'Estampillado (' + productos.map(p=>`${p.referencia} x${p.cantidad}`).join(', ') + `) - ${reg.ciudad||''}`;
+    const { error } = await sb.from('registros').update({productos, valor:nuevoValor, actividad:nuevaActividad}).eq('id', registroId);
+    if(error){ toast('No se pudo corregir la cantidad','err'); return; }
+    reg.productos = productos; reg.valor = nuevoValor; reg.actividad = nuevaActividad;
+    toast('Cantidad corregida','ok');
+    EstampilladoMod.verDetalle(auxId);
   }
 };
 
