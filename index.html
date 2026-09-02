@@ -2108,8 +2108,26 @@ const AdminMod = {
         <td>${esc(a.nombre_completo)||'<span class="small-note">Sin completar</span>'}</td>
         <td class="mono">${esc(a.cedula)}</td>
         <td>${esc(a.telefono)||'-'}</td>
-        <td><button class="btn btn-navy btn-sm" onclick="AdminMod.verAuxiliar('${a.id}')">Ver</button></td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-navy btn-sm" onclick="AdminMod.verAuxiliar('${a.id}')">Ver</button>
+          <button class="btn btn-danger btn-sm" onclick="AdminMod.eliminarAuxiliar('${a.id}')">Eliminar</button>
+        </td>
       </tr>`).join('') || `<tr><td colspan="4" class="empty-state">Sin auxiliares registrados</td></tr>`;
+  },
+  async eliminarAuxiliar(id){
+    const a = State.auxiliaresCache.find(x=>x.id===id);
+    const nombre = (a && (a.nombre_completo || a.cedula)) || 'este auxiliar';
+    if(!confirm(`¿Eliminar a ${nombre}? Esto borrará también TODOS sus registros de días laborados. Esta acción no se puede deshacer.`)) return;
+    const { error: errReg } = await sb.from('registros').delete().eq('auxiliar_id', id);
+    if(errReg){ toast('No se pudieron eliminar los registros del auxiliar','err'); return; }
+    const { error: errAux } = await sb.from('auxiliares').delete().eq('id', id);
+    if(errAux){ toast('No se pudo eliminar el auxiliar','err'); return; }
+    if(State.auxDetalleAbierto===id){
+      State.auxDetalleAbierto = null;
+      document.getElementById('auxiliar-detalle').innerHTML = '';
+    }
+    await AdminMod.renderAuxiliares();
+    toast('Auxiliar y sus registros fueron eliminados','ok');
   },
   async verAuxiliar(id){
     State.auxDetalleAbierto = id;
@@ -2137,6 +2155,7 @@ const AdminMod = {
           <button class="btn btn-navy btn-sm" onclick="AdminMod.guardarPerfilAux('${id}')">Guardar cambios</button>
           <button class="btn btn-primary btn-sm" onclick="AdminMod.abrirDescuento('${id}')">+ Agregar descuento</button>
           <button class="btn btn-ghost btn-sm" onclick="AdminMod.pdfAuxiliar('${id}')">Generar PDF del registro</button>
+          <button class="btn btn-danger btn-sm" onclick="AdminMod.eliminarAuxiliar('${id}')">Eliminar auxiliar</button>
         </div>
       </div>
       <div class="card">
