@@ -227,12 +227,6 @@ table.datatable tr:last-child td{border-bottom:none;}
 .modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;color:var(--ink-soft);}
 .product-row{display:grid;grid-template-columns:2fr 1fr auto;gap:8px;margin-bottom:8px;align-items:center;}
 
-/* Signature pad */
-.sigwrap{border:1.5px dashed var(--line-strong);border-radius:8px;background:#fcfbf7;position:relative;}
-.sigwrap canvas{width:100%;height:140px;display:block;touch-action:none;border-radius:8px;}
-.sig-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
-.sig-hint{position:absolute;bottom:8px;left:12px;color:#b9b2a0;font-size:12px;pointer-events:none;}
-
 /* Toast */
 #toast{position:fixed;bottom:22px;right:22px;z-index:2000;display:flex;flex-direction:column;gap:8px;}
 .toast-msg{background:var(--navy);color:#fff;padding:12px 16px;border-radius:8px;font-size:13.5px;box-shadow:0 8px 20px rgba(0,0,0,0.25);max-width:300px;}
@@ -297,7 +291,6 @@ table.datatable tr:last-child td{border-bottom:none;}
 .doc-page .doc-total-row td{font-weight:bold;}
 .doc-page .doc-pagar{margin:16px 0 30px;font-style:italic;}
 .doc-page .doc-firma-block{margin-top:50px;}
-.doc-page .doc-firma-img{max-width:200px;max-height:80px;display:block;margin-bottom:6px;}
 .doc-page .doc-line{border-top:1px solid #111;width:220px;margin-bottom:4px;}
 </style>
 </head>
@@ -317,7 +310,6 @@ table.datatable tr:last-child td{border-bottom:none;}
     <div class="login-body">
       <div class="seg-tabs">
         <button class="active" id="seg-aux" onclick="UI.setLoginMode('aux')">Auxiliar</button>
-        <button id="seg-cond" onclick="UI.setLoginMode('cond')">Conductor</button>
         <button id="seg-admin" onclick="UI.setLoginMode('admin')">Administrador</button>
       </div>
 
@@ -339,27 +331,6 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="field"><label>Cédula</label><input id="reg-cedula" inputmode="numeric" placeholder="Ej. 1082345678"></div>
           <p class="small-note">Al crear tu cuenta se generará una contraseña de 4 dígitos que podrás cambiar luego desde tu perfil.</p>
           <button class="btn btn-navy btn-block" onclick="Auth.registerAuxiliar()">Crear cuenta</button>
-        </div>
-      </div>
-
-      <!-- CONDUCTOR LOGIN -->
-      <div id="pane-cond" class="hidden">
-        <div class="subtabs">
-          <button class="active" id="sub-cond-ingresar" onclick="UI.setCondSub('in')">Ingresar</button>
-          <button id="sub-cond-registrar" onclick="UI.setCondSub('reg')">Crear cuenta</button>
-        </div>
-        <div id="cond-in">
-          <div class="field"><label>Cédula</label><input id="in-cond-cedula" inputmode="numeric" placeholder="Ej. 1082345678"></div>
-          <div class="field"><label>Contraseña (4 dígitos)</label><input id="in-cond-pin" maxlength="4" inputmode="numeric" placeholder="••••"></div>
-          <button class="btn btn-primary btn-block" onclick="Auth.loginConductor()">Ingresar</button>
-          <div style="text-align:center;margin-top:12px;">
-            <button class="link-btn" onclick="UI.openForgot('conductor')">¿Olvidaste tu contraseña?</button>
-          </div>
-        </div>
-        <div id="cond-reg" class="hidden">
-          <div class="field"><label>Cédula</label><input id="reg-cond-cedula" inputmode="numeric" placeholder="Ej. 1082345678"></div>
-          <p class="small-note">Al crear tu cuenta se generará una contraseña de 4 dígitos que podrás cambiar luego desde tu perfil.</p>
-          <button class="btn btn-navy btn-block" onclick="Auth.registerConductor()">Crear cuenta</button>
         </div>
       </div>
 
@@ -440,13 +411,6 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="field"><label>Correo</label><input id="ob-correo" type="email"></div>
         </div>
         <div class="field"><label>Dirección</label><input id="ob-direccion"></div>
-        <div class="field">
-          <label>Firma digital</label>
-          <div class="sigwrap"><canvas id="ob-sig-canvas"></canvas><span class="sig-hint">Firma aquí con el mouse o el dedo</span></div>
-          <div class="sig-actions">
-            <button class="btn btn-ghost btn-sm" onclick="SignaturePads.ob.clear()">Borrar firma</button>
-          </div>
-        </div>
         <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="Aux.saveOnboarding()">Guardar y continuar</button>
       </div>
     </div>
@@ -464,13 +428,6 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="field"><label>Correo</label><input id="pf-correo" type="email"></div>
         </div>
         <div class="field"><label>Dirección</label><input id="pf-direccion"></div>
-        <div class="field">
-          <label>Firma digital</label>
-          <div class="sigwrap"><canvas id="pf-sig-canvas"></canvas><span class="sig-hint">Firma aquí con el mouse o el dedo</span></div>
-          <div class="sig-actions">
-            <button class="btn btn-ghost btn-sm" onclick="SignaturePads.pf.clear()">Borrar firma</button>
-          </div>
-        </div>
         <button class="btn btn-primary" onclick="Aux.saveProfile()">Guardar cambios</button>
       </div>
       <div class="card" style="max-width:640px;">
@@ -513,13 +470,6 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="field"><label>Correo</label><input id="obc-correo" type="email"></div>
         </div>
         <div class="field"><label>Dirección</label><input id="obc-direccion"></div>
-        <div class="field">
-          <label>Firma digital</label>
-          <div class="sigwrap"><canvas id="obc-sig-canvas"></canvas><span class="sig-hint">Firma aquí con el mouse o el dedo</span></div>
-          <div class="sig-actions">
-            <button class="btn btn-ghost btn-sm" onclick="SignaturePads.obc.clear()">Borrar firma</button>
-          </div>
-        </div>
         <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="Conductor.saveOnboarding()">Guardar y continuar</button>
       </div>
     </div>
@@ -537,13 +487,6 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="field"><label>Correo</label><input id="pfc-correo" type="email"></div>
         </div>
         <div class="field"><label>Dirección</label><input id="pfc-direccion"></div>
-        <div class="field">
-          <label>Firma digital</label>
-          <div class="sigwrap"><canvas id="pfc-sig-canvas"></canvas><span class="sig-hint">Firma aquí con el mouse o el dedo</span></div>
-          <div class="sig-actions">
-            <button class="btn btn-ghost btn-sm" onclick="SignaturePads.pfc.clear()">Borrar firma</button>
-          </div>
-        </div>
         <button class="btn btn-primary" onclick="Conductor.saveProfile()">Guardar cambios</button>
       </div>
       <div class="card" style="max-width:640px;">
@@ -827,62 +770,13 @@ document.getElementById('modal-overlay').addEventListener('click', e=>{
 });
 
 /* ============================================================
-   FIRMA DIGITAL (canvas)
-   ============================================================ */
-class SigPad{
-  constructor(canvas){
-    this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
-    this.drawing = false;
-    this.hasInk = false;
-    this._resize();
-    window.addEventListener('resize', ()=>this._resize());
-    const start = e=>{ this.drawing=true; this._point(e); };
-    const move = e=>{ if(this.drawing){ this._line(e); e.preventDefault(); } };
-    const end = ()=>{ this.drawing=false; this.ctx.beginPath(); };
-    canvas.addEventListener('mousedown', start);
-    canvas.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', end);
-    canvas.addEventListener('touchstart', start, {passive:false});
-    canvas.addEventListener('touchmove', move, {passive:false});
-    canvas.addEventListener('touchend', end);
-  }
-  _resize(){
-    const rect = this.canvas.getBoundingClientRect();
-    const ratio = window.devicePixelRatio||1;
-    this.canvas.width = rect.width*ratio;
-    this.canvas.height = rect.height*ratio;
-    this.ctx.scale(ratio,ratio);
-    this.ctx.lineWidth=2.2; this.ctx.lineCap='round'; this.ctx.strokeStyle='#12283f';
-  }
-  _pos(e){
-    const rect=this.canvas.getBoundingClientRect();
-    const p = e.touches? e.touches[0]:e;
-    return {x:p.clientX-rect.left, y:p.clientY-rect.top};
-  }
-  _point(e){ const p=this._pos(e); this.ctx.beginPath(); this.ctx.moveTo(p.x,p.y); this.hasInk=true; }
-  _line(e){ const p=this._pos(e); this.ctx.lineTo(p.x,p.y); this.ctx.stroke(); this.hasInk=true; }
-  clear(){ this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height); this.hasInk=false; }
-  toDataURL(){ return this.hasInk ? this.canvas.toDataURL('image/png') : ''; }
-  loadFromDataURL(url){
-    if(!url) return;
-    const img = new Image();
-    img.onload = ()=>{ this.ctx.drawImage(img,0,0,this.canvas.getBoundingClientRect().width, this.canvas.getBoundingClientRect().height); this.hasInk=true; };
-    img.src = url;
-  }
-}
-const SignaturePads = {};
-
-/* ============================================================
    UI: navegación
    ============================================================ */
 const UI = {
   setLoginMode(mode){
     document.getElementById('seg-aux').classList.toggle('active', mode==='aux');
-    document.getElementById('seg-cond').classList.toggle('active', mode==='cond');
     document.getElementById('seg-admin').classList.toggle('active', mode==='admin');
     document.getElementById('pane-aux').classList.toggle('hidden', mode!=='aux');
-    document.getElementById('pane-cond').classList.toggle('hidden', mode!=='cond');
     document.getElementById('pane-admin').classList.toggle('hidden', mode!=='admin');
   },
   setAuxSub(sub){
@@ -898,12 +792,6 @@ const UI = {
       <button class="btn btn-primary" onclick="Auth.forgotPassword('${tipo||'auxiliar'}')">Consultar</button>
       <div id="forgot-result" style="margin-top:14px;"></div>
     `);
-  },
-  setCondSub(sub){
-    document.getElementById('sub-cond-ingresar').classList.toggle('active', sub==='in');
-    document.getElementById('sub-cond-registrar').classList.toggle('active', sub==='reg');
-    document.getElementById('cond-in').classList.toggle('hidden', sub!=='in');
-    document.getElementById('cond-reg').classList.toggle('hidden', sub!=='reg');
   },
   showApp(view){
     document.getElementById('login-screen').style.display='none';
@@ -934,7 +822,6 @@ const UI = {
       nav.innerHTML = `
         <button class="nav-item" data-v="catalogos" onclick="UI.goTo('catalogos')">Catálogos</button>
         <button class="nav-item" data-v="auxiliares" onclick="UI.goTo('auxiliares')">Auxiliares</button>
-        <button class="nav-item" data-v="conductores-admin" onclick="UI.goTo('conductores-admin')">Conductores</button>
         <button class="nav-item" data-v="estampillado" onclick="UI.goTo('estampillado')">Estampillado</button>
         <button class="nav-item" data-v="reportes-admin" onclick="UI.goTo('reportes-admin')">Reportes</button>
         <button class="nav-item" data-v="config" onclick="UI.goTo('config')">Configuración</button>
@@ -957,17 +844,16 @@ const UI = {
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.v===view));
     const titles = {
       onboarding:['Completa tu perfil',''],
-      perfil:['Mi perfil','Tus datos personales y firma digital'],
+      perfil:['Mi perfil','Tus datos personales'],
       dias:['Días laborados','Registra cada servicio prestado en ruta'],
       'reportes-aux':['Reportes','Genera tu cuenta de cobro en PDF'],
       'onboarding-cond':['Completa tu perfil',''],
-      'perfil-cond':['Mi perfil','Tus datos personales y firma digital'],
+      'perfil-cond':['Mi perfil','Tus datos personales'],
       'gastos-viaje':['Gastos de viaje','Peajes, alimentación, combustible, viáticos y otros gastos'],
       descargue:['Descargue (coteros)','Registra los pagos de cargue y descargue'],
       'reportes-cond':['Reportes','Genera tu reporte de gastos en PDF'],
       catalogos:['Catálogos','Placas, conductores, tipos de servicio, ciudades y lugares'],
       auxiliares:['Auxiliares','Perfiles, registros y descuentos'],
-      'conductores-admin':['Conductores','Perfiles y reportes de gastos de viaje'],
       estampillado:['Estampillado','Consulta por fechas qué auxiliares estampillaron y corrige cantidades'],
       'reportes-admin':['Reportes','Genera la cuenta de cobro de cualquier auxiliar'],
       config:['Configuración','Clave de acceso y plantilla de reporte']
@@ -982,7 +868,6 @@ const UI = {
     if(view==='descargue') Conductor.renderGastos('descargue');
     if(view==='catalogos') Catalogos.renderAll();
     if(view==='auxiliares') AdminMod.renderAuxiliares();
-    if(view==='conductores-admin') AdminMod.renderConductores();
     if(view==='estampillado') EstampilladoMod.init();
     if(view==='reportes-admin') AdminMod.fillAuxSelect();
     if(view==='config') AdminMod.fillConfig();
@@ -1089,23 +974,15 @@ const Bootstrap = {
       const aux = State.session.auxiliar;
       if(!aux.nombre_completo){
         UI.showApp('onboarding');
-        setTimeout(()=>{
-          SignaturePads.ob = new SigPad(document.getElementById('ob-sig-canvas'));
-        }, 30);
       } else {
         UI.showApp('dias');
-        setTimeout(()=>{ SignaturePads.pf = new SigPad(document.getElementById('pf-sig-canvas')); Aux.fillProfileForm(); }, 30);
       }
     } else if(State.session.tipo==='conductor'){
       const cond = State.session.auxiliar;
       if(!cond.nombre_completo){
         UI.showApp('onboarding-cond');
-        setTimeout(()=>{
-          SignaturePads.obc = new SigPad(document.getElementById('obc-sig-canvas'));
-        }, 30);
       } else {
         UI.showApp('gastos-viaje');
-        setTimeout(()=>{ SignaturePads.pfc = new SigPad(document.getElementById('pfc-sig-canvas')); Conductor.fillProfileForm(); }, 30);
       }
     } else {
       UI.showApp('catalogos');
@@ -1265,14 +1142,12 @@ const Aux = {
     const correo = document.getElementById('ob-correo').value.trim();
     const direccion = document.getElementById('ob-direccion').value.trim();
     if(!nombre || !direccion){ toast('Completa al menos nombre y dirección','err'); return; }
-    const firma = SignaturePads.ob ? SignaturePads.ob.toDataURL() : '';
-    const payload = { nombre_completo:nombre, telefono, correo, direccion, firma_digital:firma };
+    const payload = { nombre_completo:nombre, telefono, correo, direccion };
     const { data, error } = await sb.from('auxiliares').update(payload).eq('id', State.session.auxiliar.id).select().single();
     if(error){ toast('No se pudo guardar el perfil','err'); return; }
     State.session.auxiliar = data;
     toast('Perfil guardado','ok');
     UI.showApp('dias');
-    setTimeout(()=>{ SignaturePads.pf = new SigPad(document.getElementById('pf-sig-canvas')); Aux.fillProfileForm(); }, 30);
   },
   fillProfileForm(){
     const a = State.session.auxiliar;
@@ -1281,7 +1156,6 @@ const Aux = {
     document.getElementById('pf-telefono').value = a.telefono||'';
     document.getElementById('pf-correo').value = a.correo||'';
     document.getElementById('pf-direccion').value = a.direccion||'';
-    if(SignaturePads.pf && a.firma_digital) setTimeout(()=>SignaturePads.pf.loadFromDataURL(a.firma_digital), 50);
   },
   async saveProfile(){
     const payload = {
@@ -1290,8 +1164,6 @@ const Aux = {
       correo: document.getElementById('pf-correo').value.trim(),
       direccion: document.getElementById('pf-direccion').value.trim()
     };
-    const newSig = SignaturePads.pf ? SignaturePads.pf.toDataURL() : '';
-    if(newSig) payload.firma_digital = newSig;
     const { data, error } = await sb.from('auxiliares').update(payload).eq('id', State.session.auxiliar.id).select().single();
     if(error){ toast('No se pudo guardar','err'); return; }
     State.session.auxiliar = data;
@@ -1386,7 +1258,7 @@ const Aux = {
       </div>
 
       <div id="estampillado-block" class="hidden">
-        <label style="display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;">Productos estampillados (valor de la estampilla: $28 c/u)</label>
+        <label style="display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;">Productos estampillados (valor de la estampilla: $30 c/u)</label>
         <div id="productos-rows"></div>
         <button class="btn btn-ghost btn-sm" onclick="Aux._addProductoRow()">+ Agregar producto</button>
       </div>
@@ -1397,16 +1269,9 @@ const Aux = {
         <select id="rf-ciudad" onchange="Aux._maybeInlineAdd('ciudad')">${opts(State.catalogos.ciudades,'nombre', editing?editing.ciudad:null)}</select>
         <div class="inline-add hidden" id="add-ciudad-wrap"><input id="add-ciudad-input" placeholder="Nueva ciudad/población"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSave('ciudades','nombre','add-ciudad-input','rf-ciudad')">Guardar</button></div>
       </div>
-      <div class="field">
-        <label>Firma digital del reporte del día</label>
-        <div class="sigwrap"><canvas id="rf-sig-canvas"></canvas><span class="sig-hint">Firma aquí</span></div>
-        <div class="sig-actions"><button class="btn btn-ghost btn-sm" onclick="SignaturePads.rf.clear()">Borrar firma</button></div>
-      </div>
       <button class="btn btn-primary btn-block" style="margin-top:6px;" onclick="Aux.saveRegistro()">Guardar registro</button>
     `);
     setTimeout(()=>{
-      SignaturePads.rf = new SigPad(document.getElementById('rf-sig-canvas'));
-      if(editing && editing.firma) SignaturePads.rf.loadFromDataURL(editing.firma);
       const esEstampillado = conceptoActual==='Estampillado';
       const esCargue = conceptoActual==='Cargue';
       document.getElementById('estampillado-block').classList.toggle('hidden', !esEstampillado);
@@ -1466,7 +1331,7 @@ const Aux = {
     const concepto = document.getElementById('rf-concepto').value;
     let valor = 0;
     if(concepto==='Estampillado'){
-      valor = State.productosEstampillado.reduce((s,p)=> s + (Number(p.cantidad)||0)*28, 0);
+      valor = State.productosEstampillado.reduce((s,p)=> s + (Number(p.cantidad)||0)*30, 0);
     } else if(concepto==='Cargue'){
       valor = CARGUE_POBLACIONES_VALOR;
     } else {
@@ -1540,7 +1405,6 @@ const Aux = {
     }
 
     const valor = Number(document.getElementById('rf-valor').value)||0;
-    const firma = SignaturePads.rf ? SignaturePads.rf.toDataURL() : '';
 
     let actividad;
     if(esEstampillado){
@@ -1549,7 +1413,7 @@ const Aux = {
       actividad = `${tipo_servicio} - ${ciudad}`;
     }
 
-    const payload = { auxiliar_id: State.session.auxiliar.id, fecha, placa, conductor, valor, tipo_servicio, concepto, productos, ciudad, actividad, firma, es_descuento:false, creado_por:'auxiliar' };
+    const payload = { auxiliar_id: State.session.auxiliar.id, fecha, placa, conductor, valor, tipo_servicio, concepto, productos, ciudad, actividad, firma:'', es_descuento:false, creado_por:'auxiliar' };
 
     let error;
     if(State.editRegistroId){
@@ -1578,14 +1442,12 @@ const Conductor = {
     const correo = document.getElementById('obc-correo').value.trim();
     const direccion = document.getElementById('obc-direccion').value.trim();
     if(!nombre || !direccion){ toast('Completa al menos nombre y dirección','err'); return; }
-    const firma = SignaturePads.obc ? SignaturePads.obc.toDataURL() : '';
-    const payload = { nombre_completo:nombre, telefono, correo, direccion, firma_digital:firma };
+    const payload = { nombre_completo:nombre, telefono, correo, direccion };
     const { data, error } = await sb.from('conductores_app').update(payload).eq('id', State.session.auxiliar.id).select().single();
     if(error){ toast('No se pudo guardar el perfil','err'); return; }
     State.session.auxiliar = data;
     toast('Perfil guardado','ok');
     UI.showApp('gastos-viaje');
-    setTimeout(()=>{ SignaturePads.pfc = new SigPad(document.getElementById('pfc-sig-canvas')); Conductor.fillProfileForm(); }, 30);
   },
   fillProfileForm(){
     const a = State.session.auxiliar;
@@ -1594,7 +1456,6 @@ const Conductor = {
     document.getElementById('pfc-telefono').value = a.telefono||'';
     document.getElementById('pfc-correo').value = a.correo||'';
     document.getElementById('pfc-direccion').value = a.direccion||'';
-    if(SignaturePads.pfc && a.firma_digital) setTimeout(()=>SignaturePads.pfc.loadFromDataURL(a.firma_digital), 50);
   },
   async saveProfile(){
     const payload = {
@@ -1603,8 +1464,6 @@ const Conductor = {
       correo: document.getElementById('pfc-correo').value.trim(),
       direccion: document.getElementById('pfc-direccion').value.trim()
     };
-    const newSig = SignaturePads.pfc ? SignaturePads.pfc.toDataURL() : '';
-    if(newSig) payload.firma_digital = newSig;
     const { data, error } = await sb.from('conductores_app').update(payload).eq('id', State.session.auxiliar.id).select().single();
     if(error){ toast('No se pudo guardar','err'); return; }
     State.session.auxiliar = data;
@@ -1790,27 +1649,8 @@ const Conductor = {
     const desde = document.getElementById('repc-desde').value;
     const hasta = document.getElementById('repc-hasta').value;
     const cond = State.session.auxiliar;
-    openModal(`
-      <h3>Firma tu reporte de gastos</h3>
-      <p class="small-note">Esta firma se agregará al final del reporte, encima de tu nombre, como firma del documento.</p>
-      <div class="field">
-        <div class="sigwrap"><canvas id="repc-sig-canvas"></canvas><span class="sig-hint">Firma aquí con el mouse o el dedo</span></div>
-        <div class="sig-actions"><button class="btn btn-ghost btn-sm" onclick="SignaturePads.repc.clear()">Borrar firma</button></div>
-      </div>
-      <button class="btn btn-primary btn-block" onclick="Conductor._confirmarFirmaYGenerar('${desde||''}','${hasta||''}')">Confirmar firma y generar PDF</button>
-    `);
-    setTimeout(()=>{
-      SignaturePads.repc = new SigPad(document.getElementById('repc-sig-canvas'));
-      if(cond.firma_digital) SignaturePads.repc.loadFromDataURL(cond.firma_digital);
-    }, 30);
-  },
-  async _confirmarFirmaYGenerar(desde, hasta){
-    const firma = SignaturePads.repc ? SignaturePads.repc.toDataURL() : '';
-    if(!firma){ toast('Debes firmar antes de generar el reporte','err'); return; }
-    const cond = State.session.auxiliar;
-    closeModal();
     const gastos = await Reportes._fetchGastos(cond.id, desde||null, hasta||null);
-    const html = Reportes.buildReporteGastosHTML(cond, gastos, desde||null, hasta||null, firma);
+    const html = Reportes.buildReporteGastosHTML(cond, gastos, desde||null, hasta||null);
     Reportes.mostrarPreview(html, `reporte_gastos_${cond.cedula}.pdf`);
   }
 };
@@ -1833,7 +1673,7 @@ const Reportes = {
     const { data } = await q;
     return data||[];
   },
-  buildReporteGastosHTML(conductor, gastos, desde, hasta, firmaOverride){
+  buildReporteGastosHTML(conductor, gastos, desde, hasta){
     const total = gastos.reduce((s,g)=>s+Number(g.valor||0),0);
     const orden = [...TIPOS_GASTO_VIAJE, TIPO_GASTO_DESCARGUE];
     const grupos = orden.map(tipo => ({ tipo, items: gastos.filter(g=>g.tipo_gasto===tipo) })).filter(gr=>gr.items.length);
@@ -1873,7 +1713,7 @@ const Reportes = {
       </table>
       <div>Atentamente,</div>
       <div class="doc-firma-block">
-        ${(firmaOverride||conductor.firma_digital)?`<img class="doc-firma-img" src="${firmaOverride||conductor.firma_digital}">`:'<div class="doc-line"></div>'}
+        <div class="doc-line"></div>
         <div><b>${esc(conductor.nombre_completo||'')}</b></div>
         <div>C.C. ${esc(conductor.cedula||'')}</div>
         <div>${esc(conductor.direccion||'')}</div>
@@ -1900,7 +1740,7 @@ const Reportes = {
     if(c.includes('CIUDAD') || c.includes('POBLA')) return r.ciudad||'-';
     return '';
   },
-  buildCuentaCobroHTML(auxiliar, registros, desde, hasta, firmaOverride){
+  buildCuentaCobroHTML(auxiliar, registros, desde, hasta){
     const columnas = Reportes._columnas();
     const total = registros.reduce((s,r)=>s+Number(r.valor||0),0);
     const filas = registros.map(r=>`<tr><td>${columnas.map(c=>Reportes._valorPorColumna(c,r)).join('</td><td>')}</td></tr>`).join('');
@@ -1923,7 +1763,7 @@ const Reportes = {
       <div class="doc-pagar">Total a pagar………………………………………………………( ${money(total)} ) pesos</div>
       <div>Atentamente,</div>
       <div class="doc-firma-block">
-        ${(firmaOverride||auxiliar.firma_digital)?`<img class="doc-firma-img" src="${firmaOverride||auxiliar.firma_digital}">`:'<div class="doc-line"></div>'}
+        <div class="doc-line"></div>
         <div><b>${esc(auxiliar.nombre_completo||'')}</b></div>
         <div>C.C. ${esc(auxiliar.cedula||'')}</div>
         <div>${esc(auxiliar.direccion||'')}</div>
@@ -1999,27 +1839,8 @@ const Reportes = {
     const desde = document.getElementById('rep-desde').value;
     const hasta = document.getElementById('rep-hasta').value;
     const aux = State.session.auxiliar;
-    openModal(`
-      <h3>Firma tu cuenta de cobro</h3>
-      <p class="small-note">Esta firma se agregará al final del reporte, encima de tu nombre, como firma del documento.</p>
-      <div class="field">
-        <div class="sigwrap"><canvas id="rep-sig-canvas"></canvas><span class="sig-hint">Firma aquí con el mouse o el dedo</span></div>
-        <div class="sig-actions"><button class="btn btn-ghost btn-sm" onclick="SignaturePads.rep.clear()">Borrar firma</button></div>
-      </div>
-      <button class="btn btn-primary btn-block" onclick="Reportes._confirmarFirmaYGenerar('${desde||''}','${hasta||''}')">Confirmar firma y generar PDF</button>
-    `);
-    setTimeout(()=>{
-      SignaturePads.rep = new SigPad(document.getElementById('rep-sig-canvas'));
-      if(aux.firma_digital) SignaturePads.rep.loadFromDataURL(aux.firma_digital);
-    }, 30);
-  },
-  async _confirmarFirmaYGenerar(desde, hasta){
-    const firma = SignaturePads.rep ? SignaturePads.rep.toDataURL() : '';
-    if(!firma){ toast('Debes firmar antes de generar el reporte','err'); return; }
-    const aux = State.session.auxiliar;
-    closeModal();
     const registros = await Reportes._fetchRegistros(aux.id, desde||null, hasta||null);
-    const html = Reportes.buildCuentaCobroHTML(aux, registros, desde||null, hasta||null, firma);
+    const html = Reportes.buildCuentaCobroHTML(aux, registros, desde||null, hasta||null);
     Reportes.mostrarPreview(html, `cuenta_de_cobro_${aux.cedula}.pdf`);
   },
   async generarAdmin(){
@@ -2156,7 +1977,6 @@ const AdminMod = {
           <div class="field"><label>Dirección</label><input id="da-direccion" value="${esc(a.direccion)}"></div>
           <div class="field"><label>Contraseña (4 dígitos)</label><input id="da-pass" value="${esc(a.password)}" class="mono"></div>
         </div>
-        ${a.firma_digital?`<div class="field"><label>Firma registrada</label><img src="${a.firma_digital}" style="max-width:220px;border:1px solid var(--line);border-radius:6px;background:#fff;"></div>`:''}
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-navy btn-sm" onclick="AdminMod.guardarPerfilAux('${id}')">Guardar cambios</button>
           <button class="btn btn-primary btn-sm" onclick="AdminMod.abrirDescuento('${id}')">+ Agregar descuento</button>
@@ -2262,7 +2082,6 @@ const AdminMod = {
           <div class="field"><label>Dirección</label><input id="dc-direccion" value="${esc(c.direccion)}"></div>
           <div class="field"><label>Contraseña (4 dígitos)</label><input id="dc-pass" value="${esc(c.password)}" class="mono"></div>
         </div>
-        ${c.firma_digital?`<div class="field"><label>Firma registrada</label><img src="${c.firma_digital}" style="max-width:220px;border:1px solid var(--line);border-radius:6px;background:#fff;"></div>`:''}
         <button class="btn btn-navy btn-sm" onclick="AdminMod.guardarPerfilCond('${id}')">Guardar cambios</button>
       </div>
       <div class="card">
