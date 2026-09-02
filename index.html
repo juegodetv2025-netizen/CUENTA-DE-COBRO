@@ -692,6 +692,8 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
    ============================================================ */
 const CARGUE_POBLACIONES = 'CARGUE POBLACIONES';
 const CARGUE_POBLACIONES_VALOR = 28000;
+const ALMAVIVA_ENTREGA = 'ENTREGA DE PEDIDOS ALMAVIVA';
+const ALMAVIVA_ENTREGA_VALOR = 28000;
 const State = {
   session: null,           // {tipo:'auxiliar'|'admin', auxiliar:{...}}
   catalogos: { placas:[], conductores:[], tipos_servicio:[], ciudades:[], lugares:[], productos:[] },
@@ -1247,7 +1249,7 @@ const Aux = {
       <div id="ruta-block">
         <div class="grid2">
           <div class="field"><label>Tipo de ruta</label>
-            <select id="rf-tiposervicio" onchange="Aux._maybeInlineAdd('tiposervicio'); Aux._recalcValor();">${opts(State.catalogos.tipos_servicio,'nombre', editing?editing.tipo_servicio:null)}</select>
+            <select id="rf-tiposervicio" onchange="Aux._maybeInlineAdd('tiposervicio'); Aux._recalcValor(); Aux._actualizarConductorVisible();">${opts(State.catalogos.tipos_servicio,'nombre', editing?editing.tipo_servicio:null)}</select>
             <div class="inline-add hidden" id="add-tiposervicio-wrap"><input id="add-tiposervicio-input" placeholder="Nuevo tipo de ruta"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSave('tipos_servicio','nombre','add-tiposervicio-input','rf-tiposervicio')">Guardar</button></div>
           </div>
           <div class="field" id="conductor-field-wrap"><label>Conductor</label>
@@ -1273,10 +1275,9 @@ const Aux = {
     `);
     setTimeout(()=>{
       const esEstampillado = conceptoActual==='Estampillado';
-      const esCargue = conceptoActual==='Cargue';
       document.getElementById('estampillado-block').classList.toggle('hidden', !esEstampillado);
       document.getElementById('ruta-block').classList.toggle('hidden', esEstampillado);
-      document.getElementById('conductor-field-wrap').classList.toggle('hidden', esCargue);
+      Aux._actualizarConductorVisible();
       if(esEstampillado && !State.productosEstampillado.length){ State.productosEstampillado=[{referencia:'',cantidad:1}]; }
       Aux._renderProductoRows();
       if(!editing) Aux._recalcValor();
@@ -1320,12 +1321,19 @@ const Aux = {
   _onConceptoChange(){
     const concepto = document.getElementById('rf-concepto').value;
     const esEstampillado = concepto==='Estampillado';
-    const esCargue = concepto==='Cargue';
     document.getElementById('estampillado-block').classList.toggle('hidden', !esEstampillado);
     document.getElementById('ruta-block').classList.toggle('hidden', esEstampillado);
-    document.getElementById('conductor-field-wrap').classList.toggle('hidden', esCargue);
+    Aux._actualizarConductorVisible();
     if(esEstampillado && !State.productosEstampillado.length){ State.productosEstampillado=[{referencia:'',cantidad:1}]; Aux._renderProductoRows(); }
     Aux._recalcValor();
+  },
+  _actualizarConductorVisible(){
+    const concepto = document.getElementById('rf-concepto').value;
+    const esCargue = concepto==='Cargue';
+    const tiposervicioEl = document.getElementById('rf-tiposervicio');
+    const tipoServicio = tiposervicioEl ? (tiposervicioEl.value||'').trim().toUpperCase() : '';
+    const ocultarConductor = esCargue || tipoServicio===ALMAVIVA_ENTREGA;
+    document.getElementById('conductor-field-wrap').classList.toggle('hidden', ocultarConductor);
   },
   _recalcValor(){
     const concepto = document.getElementById('rf-concepto').value;
@@ -1336,9 +1344,11 @@ const Aux = {
       valor = CARGUE_POBLACIONES_VALOR;
     } else {
       const tiposervicioEl = document.getElementById('rf-tiposervicio');
-      const tipoServicio = tiposervicioEl ? tiposervicioEl.value : '';
-      if((tipoServicio||'').trim().toUpperCase()===CARGUE_POBLACIONES){
+      const tipoServicio = tiposervicioEl ? (tiposervicioEl.value||'').trim().toUpperCase() : '';
+      if(tipoServicio===CARGUE_POBLACIONES){
         valor = CARGUE_POBLACIONES_VALOR;
+      } else if(tipoServicio===ALMAVIVA_ENTREGA){
+        valor = ALMAVIVA_ENTREGA_VALOR;
       } else {
         const nombre = document.getElementById('rf-conductor').value;
         if(nombre==='Ninguno' || nombre==='__nuevo__' || !nombre){
