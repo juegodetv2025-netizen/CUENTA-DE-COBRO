@@ -1888,7 +1888,13 @@ const Reportes = {
     const c = col.toUpperCase();
     if(c.includes('FECHA')) return fmtDate(r.fecha);
     if(c.includes('PLACA')) return r.placa||'-';
-    if(c.includes('ACTIV')) return r.concepto==='Estampillado' ? 'PRODUCTOS VARIOS' : (r.actividad||'');
+    if(c.includes('ACTIV')){
+      if(r.concepto==='Estampillado'){
+        const totalEstampillas = (r.productos||[]).reduce((s,p)=>s+(Number(p.cantidad)||0),0);
+        return `PRODUCTOS VARIOS (${totalEstampillas})`;
+      }
+      return r.actividad||'';
+    }
     if(c.includes('VALOR')) return money(r.valor);
     if(c.includes('COND')) return r.conductor||'-';
     if(c.includes('CIUDAD') || c.includes('POBLA')) return r.ciudad||'-';
