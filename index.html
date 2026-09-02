@@ -1744,7 +1744,6 @@ const Reportes = {
     const columnas = Reportes._columnas();
     const total = registros.reduce((s,r)=>s+Number(r.valor||0),0);
     const filas = registros.map(r=>`<tr><td>${columnas.map(c=>Reportes._valorPorColumna(c,r)).join('</td><td>')}</td></tr>`).join('');
-    const poblaciones = [...new Set(registros.map(r=>r.ciudad).filter(Boolean))].join(', ') || '—';
     const fechaHoy = fmtDate(todayISO());
     return `
     <div class="doc-page">
@@ -1754,7 +1753,7 @@ const Reportes = {
       <div class="doc-nit">900.988.612-2</div>
       <div class="doc-ref">Ref. cuenta de cobro</div>
       <div class="doc-debe">debe a:</div>
-      <div class="doc-concepto"><b>${esc((auxiliar.nombre_completo||'').toUpperCase())}</b>, por concepto de operaciones logísticas en ${esc(poblaciones)} y Santa Marta, correspondiente al periodo del ${fmtDate(desde)||'—'} al ${fmtDate(hasta)||'—'}.</div>
+      <div class="doc-concepto"><b>${esc((auxiliar.nombre_completo||'').toUpperCase())}</b>, por concepto de operaciones logísticas de Entrega de Pedidos TAT o poblaciones, Cargue y estampillado, correspondiente al periodo relacionado en el filtro por fecha</div>
       <table class="doc-table">
         <thead><tr>${columnas.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>
         <tbody>${filas || `<tr><td colspan="${columnas.length}" style="text-align:center;">Sin registros en el periodo</td></tr>`}</tbody>
