@@ -1753,7 +1753,7 @@ const Reportes = {
       <div class="doc-nit">900.988.612-2</div>
       <div class="doc-ref">Ref. cuenta de cobro</div>
       <div class="doc-debe">debe a:</div>
-      <div class="doc-concepto"><b>${esc((auxiliar.nombre_completo||'').toUpperCase())}</b>, por concepto de operaciones logísticas de Entrega de Pedidos TAT o poblaciones, Cargue y estampillado, correspondiente al periodo relacionado en el filtro por fecha</div>
+      <div class="doc-concepto"><b>${esc((auxiliar.nombre_completo||'').toUpperCase())}</b>, por concepto de operaciones logísticas de Entrega de Pedidos TAT o poblaciones, Cargue y estampillado, correspondiente al periodo relacionado en el filtro por fecha del ${fmtDate(desde)||'—'} al ${fmtDate(hasta)||'—'}.</div>
       <table class="doc-table">
         <thead><tr>${columnas.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>
         <tbody>${filas || `<tr><td colspan="${columnas.length}" style="text-align:center;">Sin registros en el periodo</td></tr>`}</tbody>
