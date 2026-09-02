@@ -1730,8 +1730,10 @@ const Reportes = {
     if(c.includes('PLACA')) return r.placa||'-';
     if(c.includes('ACTIV')){
       if(r.concepto==='Estampillado'){
-        const totalEstampillas = (r.productos||[]).reduce((s,p)=>s+(Number(p.cantidad)||0),0);
-        return `PRODUCTOS VARIOS (${totalEstampillas})`;
+        const productos = r.productos||[];
+        const totalEstampillas = productos.reduce((s,p)=>s+(Number(p.cantidad)||0),0);
+        if(productos.length > 1) return `REFERENCIAS VARIAS (${totalEstampillas})`;
+        return r.actividad||'';
       }
       return r.actividad||'';
     }
