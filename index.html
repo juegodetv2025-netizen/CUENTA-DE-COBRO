@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -309,7 +310,7 @@ table.datatable tr:last-child td{border-bottom:none;}
     </div>
     <div class="login-body">
       <div class="seg-tabs">
-        <button class="active" id="seg-aux" onclick="UI.setLoginMode('aux')">Usuarios</button>
+        <button class="active" id="seg-aux" onclick="UI.setLoginMode('aux')">Auxiliar</button>
         <button id="seg-admin" onclick="UI.setLoginMode('admin')">Administrador</button>
       </div>
 
@@ -329,14 +330,14 @@ table.datatable tr:last-child td{border-bottom:none;}
         </div>
         <div id="aux-reg" class="hidden">
           <div class="field"><label>Cédula</label><input id="reg-cedula" inputmode="numeric" placeholder="Ej. 1082345678"></div>
-          <div class="field"><label>Tipo de usuario</label>
-            <select id="reg-tipo-usuario">
+          <div class="field"><label>¿Eres auxiliar o transportista?</label>
+            <select id="reg-rol">
               <option value="auxiliar">Auxiliar</option>
               <option value="transportista">Transportista</option>
             </select>
           </div>
-          <p class="small-note">Selecciona si la cuenta será para un auxiliar o para un transportista. Se generará una contraseña de 4 dígitos que podrás cambiar luego desde tu perfil.</p>
-          <button class="btn btn-navy btn-block" onclick="Auth.registerUsuario()">Crear cuenta</button>
+          <p class="small-note">Al crear tu cuenta se generará una contraseña de 4 dígitos que podrás cambiar luego desde tu perfil.</p>
+          <button class="btn btn-navy btn-block" onclick="Auth.registerAuxiliar()">Crear cuenta</button>
         </div>
       </div>
 
@@ -417,6 +418,12 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="field"><label>Correo</label><input id="ob-correo" type="email"></div>
         </div>
         <div class="field"><label>Dirección</label><input id="ob-direccion"></div>
+        <div class="field"><label>Tipo</label>
+          <select id="ob-rol">
+            <option value="auxiliar">Auxiliar</option>
+            <option value="transportista">Transportista</option>
+          </select>
+        </div>
         <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="Aux.saveOnboarding()">Guardar y continuar</button>
       </div>
     </div>
@@ -434,6 +441,12 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="field"><label>Correo</label><input id="pf-correo" type="email"></div>
         </div>
         <div class="field"><label>Dirección</label><input id="pf-direccion"></div>
+        <div class="field"><label>Tipo</label>
+          <select id="pf-rol">
+            <option value="auxiliar">Auxiliar</option>
+            <option value="transportista">Transportista</option>
+          </select>
+        </div>
         <button class="btn btn-primary" onclick="Aux.saveProfile()">Guardar cambios</button>
       </div>
       <div class="card" style="max-width:640px;">
@@ -461,67 +474,7 @@ table.datatable tr:last-child td{border-bottom:none;}
           <div class="field"><label>Desde</label><input type="date" id="rep-desde"></div>
           <div class="field"><label>Hasta</label><input type="date" id="rep-hasta"></div>
         </div>
-        <button class="btn btn-primary" onclick="Reportes.generarAuxiliar()">Generar reporte en PDF</button>
-      </div>
-    </div>
-
-    <!-- ===== TRANSPORTISTA: ONBOARDING ===== -->
-    <div class="view" id="view-onboarding-transportista">
-      <div class="card" style="max-width:640px;">
-        <h3>Completa tu perfil de transportista</h3>
-        <p class="small-note" style="margin-top:-8px;margin-bottom:16px;">Estos datos aparecerán en tu cuenta de cobro.</p>
-        <div class="field"><label>Nombre completo</label><input id="obt-nombre"></div>
-        <div class="grid2">
-          <div class="field"><label>Teléfono</label><input id="obt-telefono" inputmode="tel"></div>
-          <div class="field"><label>Correo</label><input id="obt-correo" type="email"></div>
-        </div>
-        <div class="field"><label>Dirección</label><input id="obt-direccion"></div>
-        <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="Transportista.saveOnboarding()">Guardar y continuar</button>
-      </div>
-    </div>
-
-    <!-- ===== TRANSPORTISTA: PERFIL ===== -->
-    <div class="view" id="view-perfil-transportista">
-      <div class="card" style="max-width:640px;">
-        <h3>Mis datos</h3>
-        <div class="grid2">
-          <div class="field"><label>Nombre completo</label><input id="pt-nombre"></div>
-          <div class="field"><label>Cédula</label><input id="pt-cedula" disabled></div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>Teléfono</label><input id="pt-telefono" inputmode="tel"></div>
-          <div class="field"><label>Correo</label><input id="pt-correo" type="email"></div>
-        </div>
-        <div class="field"><label>Dirección</label><input id="pt-direccion"></div>
-        <button class="btn btn-primary" onclick="Transportista.saveProfile()">Guardar cambios</button>
-      </div>
-      <div class="card" style="max-width:640px;">
-        <h3>Cambiar contraseña</h3>
-        <div class="grid3">
-          <div class="field"><label>Actual</label><input id="pt-pin-old" maxlength="4" inputmode="numeric"></div>
-          <div class="field"><label>Nueva</label><input id="pt-pin-new" maxlength="4" inputmode="numeric"></div>
-          <div class="field"><label>Confirmar</label><input id="pt-pin-new2" maxlength="4" inputmode="numeric"></div>
-        </div>
-        <button class="btn btn-navy" onclick="Transportista.changePin()">Actualizar contraseña</button>
-      </div>
-    </div>
-
-    <!-- ===== TRANSPORTISTA: DÍAS LABORADOS ===== -->
-    <div class="view" id="view-dias-transportista">
-      <div style="margin-bottom:16px;"><button class="btn btn-primary" onclick="Transportista.openRegistroForm()">+ Nuevo día laborado</button></div>
-      <div id="dias-transportista-list"></div>
-    </div>
-
-    <!-- ===== TRANSPORTISTA: CUENTA DE COBRO ===== -->
-    <div class="view" id="view-reportes-transportista">
-      <div class="card" style="max-width:600px;">
-        <h3>Generar cuenta de cobro</h3>
-        <p class="small-note" style="margin-top:-6px;">Esta cuenta usa exclusivamente la plantilla de transportistas cargada en el sistema.</p>
-        <div class="grid2">
-          <div class="field"><label>Desde</label><input type="date" id="rept-desde"></div>
-          <div class="field"><label>Hasta</label><input type="date" id="rept-hasta"></div>
-        </div>
-        <button class="btn btn-primary" onclick="Reportes.generarTransportista()">Generar cuenta de cobro en PDF</button>
+        <button class="btn btn-primary" id="rep-btn-generar" onclick="Reportes.generarAuxiliar()">Generar reporte en PDF</button>
       </div>
     </div>
 
@@ -638,8 +591,8 @@ table.datatable tr:last-child td{border-bottom:none;}
     <!-- ===== ADMIN: AUXILIARES ===== -->
     <div class="view" id="view-auxiliares">
       <div class="card">
-        <h3>Usuarios registrados</h3>
-        <table class="datatable" id="tabla-auxiliares"><thead><tr><th>Nombre</th><th>Cédula</th><th>Tipo</th><th>Teléfono</th><th></th></tr></thead><tbody></tbody></table>
+        <h3>Auxiliares registrados</h3>
+        <table class="datatable" id="tabla-auxiliares"><thead><tr><th>Nombre</th><th>Cédula</th><th>Rol</th><th>Teléfono</th><th></th></tr></thead><tbody></tbody></table>
       </div>
       <div id="auxiliar-detalle"></div>
     </div>
@@ -648,7 +601,7 @@ table.datatable tr:last-child td{border-bottom:none;}
     <div class="view" id="view-conductores-admin">
       <div class="card">
         <h3>Conductores registrados</h3>
-        <table class="datatable" id="tabla-conductores"><thead><tr><th>Nombre</th><th>Cédula</th><th>Tipo</th><th>Teléfono</th><th></th></tr></thead><tbody></tbody></table>
+        <table class="datatable" id="tabla-conductores"><thead><tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th></th></tr></thead><tbody></tbody></table>
       </div>
       <div id="conductor-detalle"></div>
     </div>
@@ -674,21 +627,12 @@ table.datatable tr:last-child td{border-bottom:none;}
     <div class="view" id="view-reportes-admin">
       <div class="card" style="max-width:600px;">
         <h3>Generar cuenta de cobro por auxiliar</h3>
-        <div class="field"><label>Auxiliar</label><select id="admrep-auxiliar"></select></div>
+        <div class="field"><label>Auxiliar</label><select id="admrep-auxiliar" onchange="AdminMod.actualizarBotonReporte()"></select></div>
         <div class="grid2">
           <div class="field"><label>Desde</label><input type="date" id="admrep-desde"></div>
           <div class="field"><label>Hasta</label><input type="date" id="admrep-hasta"></div>
         </div>
-        <button class="btn btn-primary" onclick="Reportes.generarAdmin()">Generar reporte en PDF</button>
-      </div>
-      <div class="card" style="max-width:600px;">
-        <h3>Generar cuenta de cobro por transportista</h3>
-        <div class="field"><label>Transportista</label><select id="admrep-transportista"></select></div>
-        <div class="grid2">
-          <div class="field"><label>Desde</label><input type="date" id="admrept-desde"></div>
-          <div class="field"><label>Hasta</label><input type="date" id="admrept-hasta"></div>
-        </div>
-        <button class="btn btn-primary" onclick="Reportes.generarAdminTransportista()">Generar cuenta de cobro en PDF</button>
+        <button class="btn btn-primary" id="admrep-btn-generar" onclick="Reportes.generarAdmin()">Generar reporte en PDF</button>
       </div>
     </div>
 
@@ -769,12 +713,20 @@ const CARGUE_POBLACIONES = 'CARGUE POBLACIONES';
 const CARGUE_POBLACIONES_VALOR = 28000;
 const ALMAVIVA_ENTREGA = 'ENTREGA DE PEDIDOS ALMAVIVA';
 const ALMAVIVA_ENTREGA_VALOR = 28000;
+/* Conceptos y tipos de ruta exclusivos del rol Transportista */
+const TRANSPORTISTA_CONCEPTOS = ['Transporte tipo de pedidos TAT', 'Entregas TAT'];
+const TRANSPORTISTA_TIPOS_RUTA = {
+  'Zona bananera': 400000,
+  'Urbano camioneta': 232000,
+  'Urbano furgón': 247000
+};
+/* Plantilla oficial de cuenta de cobro (Excel) para transportistas, embebida en base64 */
+const TRANSPORTISTA_PLANTILLA_XLSX_B64 = "UEsDBBQABgAIAAAAIQD/2YivlwEAAGQGAAATAAgCW0NvbnRlbnRfVHlwZXNdLnhtbCCiBAIooAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACslU1PwzAMhu9I/IcqV7RmcEAIrePAxxGQGD8gJN4aLU2i2Izt3+NmH0JoWzWtl1Zt4vd5bTfu6GHZuGIBCW3wlbguh6IAr4OxflaJz8nL4E4USMob5YKHSqwAxcP48mI0WUXAgqM9VqImivdSoq6hUViGCJ5XpiE1ivgxzWRUeq5mIG+Gw1upgyfwNKBWQ4xHTzBV346K5yW/Xjv5sl4Uj+t9LaoSKkZntSI2Khfe/IMMwnRqNZigvxuWLjEmUAZrAGpcGZNlYvoAIk4MhdzLTODwNOgmq5IjszGsbcQrTv0AYcEr52TF8U9J/XAOBwAt+jBgY+yN+52sgeJdJXpVDRdXLp38CWn+FcK8PC5yau1zD8pGWb8tzBF+3owy3657NtLml4U7fBB/xCDz9XwLWaYDiLRygH2XPYt2kWuVwHwQH49Z7wb+anf40KFpTy323fKtbhdeOf1Y8xfacw/0VvcYn0fWewoReSomON3AdgS10YPIQpDIwm4I7TtrOyKP1LMzhnZmGzB72DL/I8a/AAAA//8DAFBLAwQUAAYACAAAACEAtVUwI/QAAABMAgAACwAIAl9yZWxzLy5yZWxzIKIEAiigAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKySTU/DMAyG70j8h8j31d2QEEJLd0FIuyFUfoBJ3A+1jaMkG92/JxwQVBqDA0d/vX78ytvdPI3qyCH24jSsixIUOyO2d62Gl/pxdQcqJnKWRnGs4cQRdtX11faZR0p5KHa9jyqruKihS8nfI0bT8USxEM8uVxoJE6UchhY9mYFaxk1Z3mL4rgHVQlPtrYawtzeg6pPPm3/XlqbpDT+IOUzs0pkVyHNiZ9mufMhsIfX5GlVTaDlpsGKecjoieV9kbMDzRJu/E/18LU6cyFIiNBL4Ms9HxyWg9X9atDTxy515xDcJw6vI8MmCix+o3gEAAP//AwBQSwMEFAAGAAgAAAAhACie3+cDAwAAxwYAAA8AAAB4bC93b3JrYm9vay54bWykVdFu2jAUfZ+0f7D8niYOEErUtKIBNKRtQu3aviBVxjHEqhNntlOoqv77rhOgpbx0bQR2nOucnHPvsX12sSkkeuTaCFUmmJwEGPGSqUyUqwTf/Jl4pxgZS8uMSlXyBD9xgy/Ov387Wyv9sFDqAQFAaRKcW1vFvm9YzgtqTlTFS4gslS6ohaFe+abSnGYm59wW0g+DIPILKkrcIsT6IxhquRSMjxSrC17aFkRzSS3QN7mozA6tYB+BK6h+qCuPqaICiIWQwj41oBgVLJ6uSqXpQoLsDemhjYZfBH8SQBPuvgSho08Vgmll1NKeALTfkj7STwKfkIMUbI5z8DGkrq/5o3A13LPS0SdZRXus6BWMBF9GI2CtxisxJO+TaL09txCfny2F5LetdRGtqt+0cJWSGElq7DgTlmcJ7sNQrfnBA11Xl7WQEO0EnTDC/vnezjMNA6j9UFquS2p5qkoLVttS/6qtGuw0V2BidMX/1kJzWDtgIZADLWUxXZgZtTmqtUxwGs9vDCicPwpm1Xyk1qVUsIbmb8xHj53+H/ajzKn3QXHLqr1/rx7I6XhnsZnVCO6no5+Q5mv6CEmH0mbbNTmFrJLOfcl0TO6fo1HYiU77xJv0Ox2vG05Sb9gPAo+QYZQOht1eGvVfQIyOYqZobfNtPR10grtQvKPQL7rZRUgQ1yJ7pfEcbC/P9e+aXezFCXY7163ga/NaeTdEmztRZmqdYGAIop4Oh+smeCcym4PIQTeEKe2zH1yscmBMSC+Ah5YurtyelOBmCIZ3RBN8QHDUEpzA5bnmgKD/hmGzZQLTpkdlY/O0BlNSlHHE1EIr2KTdvtokHyMdu4/paUaa4u7eZ1SymUauayYOSBAOMIJ1osHoIy4tBQVjr+ve4hv709imBy8K4N6Pwig9jUIvHJIO5Gfc8y473Z43GU8mp2SQjtLBxNXSnQexVABwtMqlWGjebofNkQCubybGMDlt2Rmr4ey54svrJxAIpR5vGJfDVglMA4PuqPm7M+j8HwAAAP//AwBQSwMEFAAGAAgAAAAhAJIHlOwEAQAAPwMAABoACAF4bC9fcmVscy93b3JrYm9vay54bWwucmVscyCiBAEooAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKySy2rEMAxF94X+g9G+cTJ9UIZxZtFSmG2bfoBwlDhMYgdbfeTva1I6ycCQbrIxSML3Hom72393rfgkHxpnFWRJCoKsdmVjawXvxcvNI4jAaEtsnSUFAwXY59dXu1dqkeOnYJo+iKhigwLD3G+lDNpQhyFxPdk4qZzvkGPpa9mjPmJNcpOmD9LPNSA/0xSHUoE/lLcgiqGPzv9ru6pqND07/dGR5QsWMvDQxgVEgb4mVvBbJ5ER5GX7zZr2HM9Ck/tYyvHNlhiyNRm+nD8GQ8QTx6kV5DhZhLlfE0Zjq58MNnaCObWWLnK3aigMeirf2MfMz7Mxb//ByLPY5z8AAAD//wMAUEsDBBQABgAIAAAAIQCc1fI8hQUAANwVAAAYAAAAeGwvd29ya3NoZWV0cy9zaGVldDEueG1snFhRc+I2EH7vTP+DR0/tQ7BlGwgezM0l5KaZ6XU6Ta99FkaAJzZyZRGSdPrfu5KMLdk44MskQNarb3el/VbLzj+95pnzQnmZsn2M8MhDDt0nbJ3utzH69ueXm1vklILs1yRjexqjN1qiT4sff5gfGX8ud5QKBxD2ZYx2QhSR65bJjuakHLGC7uHJhvGcCPiXb92y4JSs1aI8c33Pm7g5SfdII0T8Ggy22aQJXbLkkNO90CCcZkSA/+UuLcoT2uv6Krw1J0eI9eSP4eJSP6nxcNjxL08Tzkq2EaOE5a52rRvlzJ1ZcebJNYHmhD8fihsALiC4VZql4k2Fi5w8iR63e8bJKoMTecUhSZxXDr8+/AWGw6Rr6XqXSVIjdXfyKhgcupy+pDK1Gij/+3YRj2ssvwELvhNsUoPJ7eLRIV3H6F+v+rmBdyxfvObl9Ow/tJivU8g9GZXD6SZGn3H0EPrIXcxVav+V0mNpfHYEWT3RjCaCghGMHMGKX+lG3NMsg8Vj5Lwzlj8lJKO/SbKAEHtAQ0mwFWPPEu8RVnpguVQ40jJJRPpCNcYdBvXyH+WM/AyeuLUr5ueTW18UKX/nzoqU9J5lf6drsZNmkbOmG3LIRCO8HU0C/xb74Gf17A92/IWm252AFeEI5CoDo/XbkpYJkBJcHQVj6UXCMjAJr06eyuoCqUte1ftRW/ThLJNDKVh+cqFaphfAU7UA3k8LwMUPFsBpqgXwfp2FsFoAUXxowdWhqF1dEkEWc86ODvACYioLIusfjnq3AvZA6n6WyjoFYlTCcb4sgvHcfYEjSuAPEGtYCMCEVXsNlfj8Tp/g5SKAlyl2wvdqeOXBXa0iT0f6dN+RLDuSB1NiuQnbd330Uhncg8Os3cMt92qV2r2OZNmRPJgSyz04kOvdk8rgHsRau+e33KtVavc6kmVH8mBKLPemQ9yTypJwhntBy71aRRYAM5vkHX51kkrlGJmnFLbsaA0zzYJmpyzDsyGGpbJtuCGHzl6tYRluMsgyrCri9byU9dM2PWnFrABb3G10bNuwdwNqgtS2bU/P1wSZmgNwNWnNdL5tx9RVmfWYHkR0maQQkpmquF2IKp2xqoKhul17TA8iMdZks0y3i0ylo037AfShjXP2QU4GbbjUbkXdLiBY61Smw2m/aZOysuGRTV7niq3vlS5ncVMc7JhMSl4G1owD+KZkt6sBPqPTc6v5kmcnVl40rrRjNFMtgbyr7kyJFZVvXsOXgfU9bAIbEhvY5PJlYM1lE9iQ2MAmmS8Da6aawIbEBjapehlYU9UENiQ2sEnEy8CaiCawIbGBzXvwMrC+5awuoqcQ+4NIpLRj9GGun9Ppqdb+IKIpbTvXNa3UBtqt4SASBfpqM87BlNjAg0gUVM0s4De1oX3DNEqL+Wbx9O3rT3f+LLoLvJ/n7kb2vz2VNxjEDqUdI6itjSfNRVY1vpovkDy1TtBTIoNBDFLadmPgd7ruqkM1jTdl1D6EQWQIumTwezqiYBAZlPbHXWClYnZjfk8bGAzigtK2bfvtVrfSsYz37Gg4iC9Ku2W83YZWOpbxnhIUDuKU0m4Zb8qLTuRKxzLe0M7KJRhKDLhulXbLeJtFlY7VgbcprEcP+ktyTvlWDSlKJ2EHORoIoeGrpdX8JIjgGyZ8Z2nLQ5irnJOPI/hOdUZ/Gt1N1fCjMbuYF2RLvxK+Tfelk8HYRU4npnAVcT3B0P/ASEZReMUEzCLUxx2MKik0Hd5ojPEtxp4fTHzfC4FxG8bE+UfglLT3RMWhcApSUP6UvsOMDvKf8RRmI2pOGaOCccFJKpCzA/k7gwfZskhjFMjJD4xjRQrzoEbCIzmg4o9rLOPL6JYkb9V80qmfqRGUW89lF/8DAAD//wMAUEsDBBQABgAIAAAAIQC2UZiGQgMAACwMAAATAAAAeGwvdGhlbWUvdGhlbWUxLnhtbMxW3W6bMBi9n7R3sHzfBhKShqikatKgXUya1HYP4IAhtMYg7PXn7ff5MyEQmjbbUmm5iMAcH/s79jn25dVLLsgTr1RWyIC65w4lXEZFnMk0oD/vw7MpJUozGTNRSB7QV67o1fzrl0s20xuecwL9pZqxgG60LmeDgYqgmanzouQSviVFlTMNr1U6iCv2DLy5GAwdZzLIWSYpkSwH2h9JkkWc3BtKOt+SrwS8Sq1MQySqO0PNOz0QGz+6BqGqdL0UFXliIqAO/uhgfjlgsxogdB8X4q/G1YD4cdjjc0PPv7hp+BAgdB+3Wq2WK7fhQwCLIqiiP7YXTt3FlrMFso997qUzdrwuvsU/6s3ZXywWY7+eiyVFkH30evipM/Guhx08gix+3MN7i+vlctLBI8jiJz18eOFPvC4eQRuRycc3VzAMa/YGkhTi25vwKSz41KnhOxSsfrNzzBBJIfWhfZSzh6IKAWCAgulMEv1a8oRFsEOXLF9XGTMDsBlnrS+2KVJ7TTByhzDP5HvsIgP6P2PfEcJYu8KwzLyuEl8yIe70q+DfFZamCpHFITSi5miqxjflBh5rFTu4tGJNn1TVTKkiZaHAbehDtD7fo0IzZ1JbW46NLbf025HRoym6fEs4MsBjSUcXx5G6NhMOVt2dqotTsAHSVNZMFRRvVID9SJjJS3cCwWbmQlTEBI+hxa6ozgS/5ZG2bB0p/0FWtWExr3U1tR2hq3HJB7q2WP3R6YRt03rv0R6pLFYLh9ABZY0j9ra9kG0TCEmeA+qPh2NKIlYGNAHHw2NewrIpmVLCRApHYqQr3IdlpfQNUxurN1pjm/IS8wL5hmOo7ZSEoyms7CkIQZCuADxJYEe2JWm1YMghAJxud+2bX7H7ScEwz/7M1qmJq/8kw8zuPcZrFndk2njbtIF7zM7Wvv8pBsSUOpgWbQOWTG+I+QMjZFUk7OXMOOu+MIFG4KplM53ogJ7ZeCFV07iGCLSNdhMZKhuznxGIcGLX50x7zH54m+y2B9cxR0JrPUweHl76vxeulrCjW/uo/Eg2GHnfIiYAd5cAeMPrevtGXawfYAVv4H7zS2hl7zUvumJwgNsbUmN97Dr/DQAA//8DAFBLAwQUAAYACAAAACEANMipkkIFAAC7FwAADQAAAHhsL3N0eWxlcy54bWzUWF+PozYQf6/U74C4PjYLhMCFKMlpl12kk66nSruV+tAXAiaxzkAEzja5qt+9MzYEktibbG7b6shDsMfzm7+eMZ5+2ObMeCZVTctiZjo3tmmQIilTWixn5m9P0WBsGjWPizRmZUFm5o7U5of5jz9Ma75j5HFFCDcAoqhn5orz9cSy6mRF8ri+KdekAEpWVnnMYVgtrXpdkTitkSln1tC2fSuPaWFKhEmeXAKSx9WXzXqQlPk65nRBGeU7gWUaeTL5uCzKKl4wUHXrjOLE2Dp+NTS2VStEzJ7IyWlSlXWZ8RvAtcosowk5VTewAitOOiRAvg7J8Sx7eGD7troSaWRV5Jli+Mz5tNjkUc5rIyk3BYdw7qcMSfmYwqQ/Mg0ZlbBMwU9//PTu53fvbNOaT60GYD7NyqLD8cFkdObkS1H+WURIkuC4aj6tvxrPMYMZBzGSkpWVwSEJAFvMFHFO5IowZnRRUVyWxTllOzk9FHyruKohmySU0EbCq4R0kLcVjdkF/AuQuVd0hAzfiHFk2lV69BxWLRczM2qe69TbmydiqTDvxOeW9K34qyEmlLF98riQPDgxn8I+46QqIhgYzfvTbg3RLaAkyECJdWdWL6t45wy9yxnqktEUtViGIqcaFznR6OH9GGEWhwTbdl3fF/g9lSGrpWLiD6xclFUKBa/dJGinnJpPGck44FZ0ucJ/Xq5RSsk5FIX5NKXxsixihhul5ehzQqGEmjgz+QpqWrsRGqVvxSN0QyGNjAs5hD5CnQsZQPFW7ws5pJFX2kiLlGwJ1BYoLeiccxYerz9j3/Hyc9Ydr3/JtiaQkBYJYewRA/h7dlBAt1mveEJ7xC2DdRRfIe2bV5kHcoAu6KNJ7D6sB+nxelxjm+0F6LgdrVZ7biNer9kOq3hTn3VY7htiYc9pvDU0jc5boG9r1aFezQh4UEs5uhM7txvfMrosctK2Omgucmisyop+BQOxKyVAJ9D+4ZDDadKbwTBtM30gdK48o3KnJAg4cG3TeWX6XIz+eZMvSBWJY1Rnehu+Y8ccy+wlrC6cb2PPxehvZo8upSC/vreUOqPyf5v3ukherOQLOQgYmqL5Ysz+3Y3+6jonN93/U31gQ7+U3d+9p9qqLDoo9MxeYz5oy/sGa+BBd2Z+xgLJes5ZbCjjtFC0ZMBMt12TF6dljt+Mov3vpYCnU5LFG8af9sSZ2b3/QlK6ySGjm1W/0ueSC4iZ2b1/wrOkI06l4ssIhDfnE3GohSGcEA/Ot7Z48CB1TJFfB2oKMqkoth1FOgrSdHLUPIil5sF5NWWstce2kabWGmkqyljLg1hqHpxXU0Ibfzo5ap4AHrWlQdB+gKgiF4YqOWGo85vvwwWJSJxTNJ09yKGTg5Je52t9tFFnfb7p80AXU3326i3VZ6LOUr2vkaL2G1oaBCq/BYFODnLooqDLHZSvloM5pfao64bw6HTT7eAw1FGCQEfBXFTJ8eFRa9198J7WN90ucd0gUGc8ftqrNXDhUVNwN+opajnd3cKx1ijHdU99gJmrtgfn1fZIHpVuyKPW2rZ19kiKyh6JpoqPpEh7rKN+ZLV9imz5pxquKuDf2FR0Zv71cPc+uH+IhoOxfTcejFziDQLv7n7gjcK7+/sosId2+HfvpvUb7lnFxTB8QDmjSc3gNrZqmnPTbB+7uZnZG8h2K24hQO2+7sHQt289xx5Eru0MRn48Hox91xtEnjO890d3D17k9XT3rryPtS3HkTe7qLw34TQnjBbt2aI9UfRn4VABwxeMsNpIWN2t+/wfAAAA//8DAFBLAwQUAAYACAAAACEA6X8S+pMCAACkBQAAFAAAAHhsL3NoYXJlZFN0cmluZ3MueG1sdFTBbhoxEL1X6j+MtpdEanZZUAhEQLoBEkUigGCTQ2/GO4Alr721vVHbP8qhp9565cc6BqRKuNx2/d6zx2/euHf3vZTwhsYKrfpRGjciQMV1IdSmH73kD1edCKxjqmBSK+xHP9BGd4OPH3rWOiCtsv1o61x1mySWb7FkNtYVKkLW2pTM0a/ZJLYyyAq7RXSlTJqNRjspmVARcF0r149a3QhqJb7VODwu3ESDnhWDnhsMX8bTPIPRGIaz+8Wsl7hBL/HQAZ48DWfT5ctztiDKBJ6zx1E2GU8zWGbLU+70KYduoxF3O524nTavmqeEEa4Q2G2g0+XKYLA83L0XtWRwMYyH8WUIa8WxcjoAXslLgxYKBINrNGS4YFBpA8XuFzs9PBeV3lNrF2D7nc4qv2rFYMUUU2gC6YshRANnJXUew62P+Lo2m91vFRhFhVqqfiOsM6zQdl9EJRkPDpr/b/EB+TZgLtDWJarzW+XaMbk3yQYuHSA8g87ybAIZzLPHbHEqHSuQSLewQaNGzNHNCpSU05W/pjnVPrCVYAoWgkaIqPdoyt2fAn+e8nxCgu1p2jppfNO5jrutlm/xnMmSUQoQXplBGRg0EgY5F9SPMGxMSoS0CZ+gC1eQptef4ZGJsO9jGjwZyM3hAiuqv6by0+svG8+LuS4Dp1Hu3tdahbluNdJ2p9VstW9ONRcc95PirfROU9adt/MyICoympp45KnzRIoKc8LQ4JBd0rdJUCIlW+lDHmnVaR9Mj73hVvDaf3H/EB3jitYhVGjWQoaFvPkhBRpLtqGWUCoPGQmJax9lX8QG/ZxxGqd9SQx4jcrtIR8fHUjzRbaczxb52D9u8/HoaTRbQp7l/0xJ6JUd/AUAAP//AwBQSwMEFAAGAAgAAAAhAHwznt2HAgAA0gQAABsAAAB4bC9kcmF3aW5ncy92bWxEcmF3aW5nMS52bWyMVMFu2zAMvQ/YPwjaoZd4sdOmLRQ7QNeht23ANmCHoSgUWYnVyKIhKY7Trx8lOW2KFcOCxJJJ6pGPj0o5tJrgzzjWV3RnDXOikS13WauEBQdrnwloWd9q+v7dGAn/ioT1WgnJ0vJyZviPM3IQUtMl5imBuYZ3UvMD7DzpmRx8RWWtfHQHv6pb3r3ykJp7XtGCTiPE9BXGsuwTpD90kqi6og9Djp8HP8tnlAgAWzv1JCs6Ky7zfBKflCBGh5lDDJZFOu6birYTnfw2xeq0DHIsDjN5C1tJHkEZ5w8aUVvlpU2VESwlAJGN5bWSxkeqsK2oDwkFGCOFD3VW1OLuyOeEwDObyCSef8hTtSfUXJHP5pQkpA+nfAOXVNhZB055BYbxlQO983LRcrtRJtNy7dn8+uO880eTh46d4+te1b5hRX4VnQGskWrTeFZcpPinTJlaDqxY9MqpldLKH1ij6lqaResg21veZbEAZsDIRYDoM48qZ9yIBixrMVjLM+wH1xr2yuBo6IquKVkrrQVosBVVZg2fuNhuLOxMTX5f5/dRptT+MSgkQFdx/6xOQEDFEWL2NgZmraXH1rewc1JoJaI4ca6CeqO8znOLXwv7iq40iO2LvihJDXsCJor6VyUEVk7srMQxHOUNsIH/CoYwvYSUteqPGqXGaLUxLKhytiyn6I1x5fT1uXJgtzoM1We8DOTb6hFZ/Iyj9BX8OKAEg75AL38p39xiW10iFsw/8Aq8Yb6JoqTCSD4hV9eTsFxMSDEhl7grwls5HdhpJOLd7DzcYbuXd1w7GQOOlsRyYN9hvzyfBVfYHa23OIutWRbBPu6DK74+80v3fLwX2BT8I1v+AQAA//8DAFBLAwQUAAYACAAAACEA1Tg7PfAAAABdAgAAIwAAAHhsL3dvcmtzaGVldHMvX3JlbHMvc2hlZXQxLnhtbC5yZWxzrJLBSgMxEIbvgu8Q5m6yqSAizfZShF61PkDMzu6GbiYhidW+vVMEdUvFS2+Z+ck3H8MsVx9hEnvMxUcyoGUDAsnFztNg4GX7eHMPolRLnZ0ioYEDFli111fLJ5xs5U9l9KkIplAxMNaaHpQqbsRgi4wJiZM+5mArl3lQybqdHVAtmuZO5d8MaGdMsekM5E13C2J7SDz5f3bse+9wHd1bQKpnRigXwzEqzLR5wGpAyu+mluwK6rzG4pIa+zCts33nHc9Euq9eUT+5lvz+y0lf0illTxXzM9bKXvMNnWTqpNby1dNRUs2Oov0EAAD//wMAUEsDBBQABgAIAAAAIQACe1B/iAAAAOgDAAAnAAAAeGwvcHJpbnRlclNldHRpbmdzL3ByaW50ZXJTZXR0aW5nczEuYmluCmDwZwhm0GUwZbBgcGZQYNBgSGbIZyhgqASyjRg0GQgBRhZmtjsMPMzO7xtYGRk4Gb7XP2BMYWBk4Gc4DSQZgSQTkKQugJkHopmAGET/BwJ0W1w8/UKVGDYAXcfAcMJ6pik+V7BR2Y2jxg29ECAlnW4Aei/YN8QL5EsBhgWD3rMAAAAA//8DAFBLAwQUAAYACAAAACEA/8eRS+cBAAA2AwAAEAAAAHhsL2NvbW1lbnRzMS54bWyMUk2P0zAQvSPxH0Y+gUTrdBetUNVktUistBIHDiz3qWM31tqeMHZKC+IHcdgTP6F/jEnT8qG9EEW2583M89Mbr653McDWcvaUarWYVwpsMtT6tKnV/cfb2RsFuWBqMVCytdrbrK6b589WhmK0qWQQgpRr1ZXSL7XOprMR85x6myTjiCMWCXmjc88W29xZW2LQF1V1pSP6pCaGZTT/QxKRH4Z+Jrf3WPzaB1/2Ry4F0SzvNokY10GE7vhMvOMnxNEbpkyuzIVIk3Pe2Cf6Fq81260fnVHNCofSEefzoblPD4m+JLg54is95ZvzQQpPDr33ufwOgK2r1dvLSwVTw11bK/E8d9jb03nHy8EL/K06fTPZr8al+rNUiyn5XaQVu5MbWP4PsuSvsMUgs6yUFuiWUpmAG/YYRsxh9GE/gRcjoI+NpfkkQ2YoFLElEGctYxiHbKG1AVoywxgREPuNTxjghRkEQEmDoTUTuMNj9gZfzuHd3w2JwKdWEvB5OPyAguwdQi+XtYdHBOzDmEMw2Aoc0KB21nT46lgTSNosCImTrafsZcLipKGUCw+ewWbRWKiIpGhbj6Nkd/jJcQgjbY9cpEpUSljkfRwVTyryfKXFPS3O6clIfRqcAP+M8Bzl5hcAAAD//wMAUEsDBBQABgAIAAAAIQAL5B4DlgAAAKoAAAAQAAAAeGwvY2FsY0NoYWluLnhtbDyOwQoCIRRF90H/IG/f6BREhDpQ0BfUB4jzGgV9Dj6J+vts0+bC4cK5V0/vnMQLK8dCBsZBgUDyZY60GHjcb7sTCG6OZpcKoYEPMkx2u9HeJX8NLpLoBmIDobX1LCX7gNnxUFak3jxLza51rIvktaKbOSC2nOReqaPMXQBWe1ENXA4jiNhPgEi/lFbL/4r9AgAA//8DAFBLAwQUAAYACAAAACEAA/scwpUBAAD9AgAAEQAIAWRvY1Byb3BzL2NvcmUueG1sIKIEASigAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAjJJNbxshEIbvlfofVtzXYG+dNmiNpbbKqZEqxVGq3CiM17QsiwB/5dd3lrU3tpJDbzDzzsPMO9TLQ2uLHYRoOrcg0wkjBTjVaeOaBXlc3ZVfSBGTdFrazsGCHCGSpfj4oVaeqy7Az9B5CMlALJDkIld+QTYpeU5pVBtoZZygwmFy3YVWJryGhnqp/soG6IyxG9pCklomSXtg6UciOSG1GpF+G2wGaEXBQgsuRTqdTOmrNkFo47sFOXOhbE06epzp1O4lW6shOaoP0YzC/X4/2Ve5Dex/Sn/d/3jIo5bG9V4pIKLWiieTLIiavh7xFLe//4BKQ3i8YEIFkKkLonfLHw82152DPU5DVMH4hJsaqq8CuA8rY7rH1a0N6K9HsTMKecVm23SFRepLEbG3DbzU9K2432eAnen/gWBZMV7x8Wzd0CLoAs3gg3XnzFP17fvqjogZm92U7LZk1YoxPp/zefXcD3JV35szBNpTt/9JnPFPc159viCeAdlvK12zxV8lwJWPD9m/MZQnuv6w4h8AAAD//wMAUEsDBBQABgAIAAAAIQBmIsFhowEAADsDAAAQAAgBZG9jUHJvcHMvYXBwLnhtbCCiBAEooAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJyTTW7bMBCF9wVyB4H7mHJSBIVBMSicBF60qAEr2U+okc2WIglyLNi9Tc/Si5WUUltGuupu/vT48Q0l7g+dKXoMUTtbsfmsZAVa5RpttxV7rp+uP7EiEtgGjLNYsSNGdi+vPoh1cB4DaYxFkrCxYjsiv+A8qh12EGepbVOndaEDSmnYcte2WuGDU/sOLfGbsrzjeCC0DTbX/iTIRsVFT/8r2jiV+eJLffQJWIoaO2+AUAp+DmtHYGrdoSxT+ZSIz94brYCSJfKrVsFF11LxeFBoBJ82RbrKBtU+aDpmjWkqNgoMLhOFbMFEFPxcECuE7PAadIhS9LToUZELRdQ/k8c3rHiFiJm9Yj0EDZbSHfLYmAyx8ZGCXLnvEIsGC/X7l1F74wRPc2NvCKefTGP9Uc6HgRRcDmaBkSc1LklrTQbjt3YNgf4BPp+CDwwj9oiz3Kelw8DqXsN70MGCvKDLQ75o+yM++9o95P29eXlZFJsdBGyS/SevTwWxSjYGk0WWO7BbbP7OvG/kzb+M/4Kc383K2zItdVIT/Pzq5R8AAAD//wMAUEsBAi0AFAAGAAgAAAAhAP/ZiK+XAQAAZAYAABMAAAAAAAAAAAAAAAAAAAAAAFtDb250ZW50X1R5cGVzXS54bWxQSwECLQAUAAYACAAAACEAtVUwI/QAAABMAgAACwAAAAAAAAAAAAAAAADQAwAAX3JlbHMvLnJlbHNQSwECLQAUAAYACAAAACEAKJ7f5wMDAADHBgAADwAAAAAAAAAAAAAAAAD1BgAAeGwvd29ya2Jvb2sueG1sUEsBAi0AFAAGAAgAAAAhAJIHlOwEAQAAPwMAABoAAAAAAAAAAAAAAAAAJQoAAHhsL19yZWxzL3dvcmtib29rLnhtbC5yZWxzUEsBAi0AFAAGAAgAAAAhAJzV8jyFBQAA3BUAABgAAAAAAAAAAAAAAAAAaQwAAHhsL3dvcmtzaGVldHMvc2hlZXQxLnhtbFBLAQItABQABgAIAAAAIQC2UZiGQgMAACwMAAATAAAAAAAAAAAAAAAAACQSAAB4bC90aGVtZS90aGVtZTEueG1sUEsBAi0AFAAGAAgAAAAhADTIqZJCBQAAuxcAAA0AAAAAAAAAAAAAAAAAlxUAAHhsL3N0eWxlcy54bWxQSwECLQAUAAYACAAAACEA6X8S+pMCAACkBQAAFAAAAAAAAAAAAAAAAAAEGwAAeGwvc2hhcmVkU3RyaW5ncy54bWxQSwECLQAUAAYACAAAACEAfDOe3YcCAADSBAAAGwAAAAAAAAAAAAAAAADJHQAAeGwvZHJhd2luZ3Mvdm1sRHJhd2luZzEudm1sUEsBAi0AFAAGAAgAAAAhANU4Oz3wAAAAXQIAACMAAAAAAAAAAAAAAAAAiSAAAHhsL3dvcmtzaGVldHMvX3JlbHMvc2hlZXQxLnhtbC5yZWxzUEsBAi0AFAAGAAgAAAAhAAJ7UH+IAAAA6AMAACcAAAAAAAAAAAAAAAAAuiEAAHhsL3ByaW50ZXJTZXR0aW5ncy9wcmludGVyU2V0dGluZ3MxLmJpblBLAQItABQABgAIAAAAIQD/x5FL5wEAADYDAAAQAAAAAAAAAAAAAAAAAIciAAB4bC9jb21tZW50czEueG1sUEsBAi0AFAAGAAgAAAAhAAvkHgOWAAAAqgAAABAAAAAAAAAAAAAAAAAAnCQAAHhsL2NhbGNDaGFpbi54bWxQSwECLQAUAAYACAAAACEAA/scwpUBAAD9AgAAEQAAAAAAAAAAAAAAAABgJQAAZG9jUHJvcHMvY29yZS54bWxQSwECLQAUAAYACAAAACEAZiLBYaMBAAA7AwAAEAAAAAAAAAAAAAAAAAAsKAAAZG9jUHJvcHMvYXBwLnhtbFBLBQYAAAAADwAPAOsDAAAFKwAAAAA=";
 const State = {
   session: null,           // {tipo:'auxiliar'|'admin', auxiliar:{...}}
   catalogos: { placas:[], conductores:[], tipos_servicio:[], ciudades:[], lugares:[], productos:[] },
   adminConfig: { password:'1234', columnas_reporte:['FECHA','PLACA','ACTIVIDAD','VALOR'] },
   registrosCache: [],
-  registrosTransportistaCache: [],
   auxiliaresCache: [],
   conductoresAppCache: [],
   auxiliaresNombresCache: [],
@@ -796,6 +748,41 @@ function money(n){
   n = Number(n)||0;
   return '$ ' + n.toLocaleString('es-CO', {minimumFractionDigits:0, maximumFractionDigits:0});
 }
+function numeroALetras(n){
+  n = Math.round(Number(n)||0);
+  if(n===0) return 'CERO PESOS M/CTE';
+  const UNIDADES = ['','UN','DOS','TRES','CUATRO','CINCO','SEIS','SIETE','OCHO','NUEVE','DIEZ','ONCE','DOCE','TRECE','CATORCE','QUINCE','DIECISÉIS','DIECISIETE','DIECIOCHO','DIECINUEVE','VEINTE'];
+  const DECENAS = ['','','VEINTE','TREINTA','CUARENTA','CINCUENTA','SESENTA','SETENTA','OCHENTA','NOVENTA'];
+  const CENTENAS = ['','CIENTO','DOSCIENTOS','TRESCIENTOS','CUATROCIENTOS','QUINIENTOS','SEISCIENTOS','SETECIENTOS','OCHOCIENTOS','NOVECIENTOS'];
+  function trescientos(num){
+    let s='';
+    if(num===100) return 'CIEN';
+    if(num>=100){ s+=CENTENAS[Math.floor(num/100)]+' '; num%=100; }
+    if(num<=20){ s+=UNIDADES[num]; }
+    else if(num<30){ s+='VEINTI'+UNIDADES[num-20].toLowerCase(); s=s.toUpperCase(); }
+    else{
+      s+=DECENAS[Math.floor(num/10)];
+      if(num%10){ s+=' Y '+UNIDADES[num%10]; }
+    }
+    return s.trim();
+  }
+  function seccion(num, singular, plural){
+    if(num<=0) return '';
+    if(num===1) return singular;
+    return trescientos(num)+' '+plural;
+  }
+  let entero = Math.floor(n);
+  const millones = Math.floor(entero/1000000);
+  entero %= 1000000;
+  const miles = Math.floor(entero/1000);
+  entero %= 1000;
+  const cientos = entero;
+  let partes = [];
+  if(millones) partes.push(seccion(millones,'UN MILLÓN','MILLONES'));
+  if(miles) partes.push((miles===1?'MIL':trescientos(miles)+' MIL'));
+  if(cientos) partes.push(trescientos(cientos));
+  return (partes.join(' ').trim() || 'CERO') + ' PESOS M/CTE';
+}
 function rand4(){ return String(Math.floor(1000+Math.random()*9000)); }
 function todayISO(){ return new Date().toISOString().slice(0,10); }
 function fmtDate(d){
@@ -811,6 +798,12 @@ function toast(msg, type){
   setTimeout(()=>el.remove(), 4200);
 }
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function b64ToArrayBuffer(b64){
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
 function fileToCompressedDataURL(file, maxW){
   maxW = maxW || 900;
   return new Promise((resolve, reject)=>{
@@ -887,16 +880,6 @@ const UI = {
       `;
       document.getElementById('side-nombre').textContent = State.session.auxiliar.nombre_completo || 'Sin nombre';
       document.getElementById('side-detalle').textContent = 'CC ' + State.session.auxiliar.cedula;
-    } else if(State.session.tipo==='transportista'){
-      nav.innerHTML = `
-        <button class="nav-item" data-v="perfil-transportista" onclick="UI.goTo('perfil-transportista')">Perfil</button>
-        <button class="nav-item" data-v="dias-transportista" onclick="UI.goTo('dias-transportista')">Días laborados</button>
-        <button class="nav-item" data-v="reportes-transportista" onclick="UI.goTo('reportes-transportista')">Cuenta de cobro</button>
-      `;
-      document.getElementById('side-nombre').textContent = State.session.auxiliar.nombre_completo || 'Sin nombre';
-      document.getElementById('side-detalle').textContent = 'Transportista · CC ' + State.session.auxiliar.cedula;
-      document.getElementById('side-nombre').textContent = State.session.auxiliar.nombre_completo || 'Sin nombre';
-      document.getElementById('side-detalle').textContent = 'CC ' + State.session.auxiliar.cedula;
     } else if(State.session.tipo==='conductor'){
       nav.innerHTML = `
         <button class="nav-item" data-v="perfil-cond" onclick="UI.goTo('perfil-cond')">Perfil</button>
@@ -935,10 +918,6 @@ const UI = {
       perfil:['Mi perfil','Tus datos personales'],
       dias:['Días laborados','Registra cada servicio prestado en ruta'],
       'reportes-aux':['Reportes','Genera tu cuenta de cobro en PDF'],
-      'onboarding-transportista':['Completa tu perfil de transportista',''],
-      'perfil-transportista':['Mi perfil','Datos del transportista'],
-      'dias-transportista':['Días laborados','Registra cada día de servicio por placa'],
-      'reportes-transportista':['Cuenta de cobro','Genera la cuenta de cobro según la plantilla de transportistas'],
       'onboarding-cond':['Completa tu perfil',''],
       'perfil-cond':['Mi perfil','Tus datos personales'],
       'gastos-viaje':['Gastos de viaje','Peajes, alimentación, combustible, viáticos y otros gastos'],
@@ -954,16 +933,15 @@ const UI = {
     document.getElementById('view-title').textContent = (titles[view]||['',''])[0];
     document.getElementById('view-sub').textContent = (titles[view]||['',''])[1];
     if(view==='dias') Aux.renderDias();
+    if(view==='reportes-aux') Reportes.actualizarBotonAuxiliar();
     if(view==='perfil') Aux.fillProfileForm();
-    if(view==='perfil-transportista') Transportista.fillProfileForm();
-    if(view==='dias-transportista') Transportista.renderDias();
     if(view==='perfil-cond') Conductor.fillProfileForm();
     if(view==='gastos-viaje') Conductor.renderGastos('viaje');
     if(view==='descargue') Conductor.renderGastos('descargue');
     if(view==='catalogos') Catalogos.renderAll();
     if(view==='auxiliares') AdminMod.renderAuxiliares();
     if(view==='estampillado') EstampilladoMod.init();
-    if(view==='reportes-admin') { AdminMod.fillAuxSelect(); AdminMod.fillTransportistaSelect(); }
+    if(view==='reportes-admin') AdminMod.fillAuxSelect();
     if(view==='config') AdminMod.fillConfig();
   }
 };
@@ -972,27 +950,23 @@ const UI = {
    AUTENTICACIÓN
    ============================================================ */
 const Auth = {
-  async registerUsuario(){
+  async registerAuxiliar(){
     const cedula = document.getElementById('reg-cedula').value.trim();
-    const tipo = document.getElementById('reg-tipo-usuario').value;
+    const rol = document.getElementById('reg-rol').value || 'auxiliar';
     if(!cedula){ toast('Ingresa tu número de cédula','err'); return; }
-    if(!['auxiliar','transportista'].includes(tipo)){ toast('Selecciona el tipo de usuario','err'); return; }
     const { data: existing } = await sb.from('auxiliares').select('id').eq('cedula', cedula).maybeSingle();
     if(existing){ toast('Esa cédula ya está registrada. Inicia sesión.','err'); return; }
     const pin = rand4();
-    const { data, error } = await sb.from('auxiliares').insert({ cedula, password: pin, tipo_usuario: tipo }).select().single();
+    const { data, error } = await sb.from('auxiliares').insert({ cedula, password: pin, rol }).select().single();
     if(error){ toast('No se pudo crear la cuenta: '+error.message,'err'); return; }
-    const etiqueta = tipo==='transportista' ? 'Transportista' : 'Auxiliar';
     openModal(`
       <h3>Cuenta creada</h3>
-      <p>Tipo de usuario: <b>${etiqueta}</b></p>
       <p>Tu contraseña de 4 dígitos es:</p>
       <div class="mono" style="font-size:28px;font-weight:700;letter-spacing:6px;background:#eee8d8;padding:14px;border-radius:8px;text-align:center;">${pin}</div>
       <p class="small-note">Guárdala bien, la necesitarás para ingresar. Podrás cambiarla luego desde tu perfil.</p>
-      <button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="closeModal(); Auth._enterAsUsuario(${JSON.stringify(data).replace(/"/g,'&quot;')})">Continuar</button>
+      <button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="closeModal(); Auth._enterAsAuxiliar(${JSON.stringify(data).replace(/"/g,'&quot;')})">Continuar</button>
     `);
   },
-  async registerAuxiliar(){ return this.registerUsuario(); },
   async loginAuxiliar(){
     const cedula = document.getElementById('in-cedula').value.trim();
     const pin = document.getElementById('in-pin').value.trim();
@@ -1000,21 +974,11 @@ const Auth = {
     const { data, error } = await sb.from('auxiliares').select('*').eq('cedula', cedula).maybeSingle();
     if(error || !data){ toast('Cédula no encontrada','err'); return; }
     if(String(data.password)!==pin){ toast('Contraseña incorrecta','err'); return; }
-    if(data.tipo_usuario==='transportista') Auth._enterAsTransportista(data);
-    else Auth._enterAsAuxiliar(data);
-  },
-  _enterAsUsuario(data){
-    if(data.tipo_usuario==='transportista') Auth._enterAsTransportista(data);
-    else Auth._enterAsAuxiliar(data);
+    Auth._enterAsAuxiliar(data);
   },
   _enterAsAuxiliar(data){
     State.session = { tipo:'auxiliar', auxiliar:data };
     localStorage.setItem('cc_session', JSON.stringify({tipo:'auxiliar', id:data.id}));
-    Bootstrap.afterLogin();
-  },
-  _enterAsTransportista(data){
-    State.session = { tipo:'transportista', auxiliar:data };
-    localStorage.setItem('cc_session', JSON.stringify({tipo:'transportista', id:data.id}));
     Bootstrap.afterLogin();
   },
   async registerConductor(){
@@ -1083,15 +1047,9 @@ const Bootstrap = {
       const aux = State.session.auxiliar;
       if(!aux.nombre_completo){
         UI.showApp('onboarding');
+        setTimeout(()=>{ document.getElementById('ob-rol').value = aux.rol||'auxiliar'; }, 30);
       } else {
         UI.showApp('dias');
-      }
-    } else if(State.session.tipo==='transportista'){
-      const t = State.session.auxiliar;
-      if(!t.nombre_completo){
-        UI.showApp('onboarding-transportista');
-      } else {
-        UI.showApp('dias-transportista');
       }
     } else if(State.session.tipo==='conductor'){
       const cond = State.session.auxiliar;
@@ -1110,9 +1068,9 @@ const Bootstrap = {
     try{
       const s = JSON.parse(raw);
       if(s.tipo==='admin'){ State.session={tipo:'admin'}; await Bootstrap.afterLogin(); }
-      else if((s.tipo==='auxiliar' || s.tipo==='transportista') && s.id){
+      else if(s.tipo==='auxiliar' && s.id){
         const { data } = await sb.from('auxiliares').select('*').eq('id', s.id).maybeSingle();
-        if(data){ State.session={tipo:(data.tipo_usuario==='transportista'?'transportista':'auxiliar'), auxiliar:data}; await Bootstrap.afterLogin(); }
+        if(data){ State.session={tipo:'auxiliar', auxiliar:data}; await Bootstrap.afterLogin(); }
       }
       else if(s.tipo==='conductor' && s.id){
         const { data } = await sb.from('conductores_app').select('*').eq('id', s.id).maybeSingle();
@@ -1257,8 +1215,9 @@ const Aux = {
     const telefono = document.getElementById('ob-telefono').value.trim();
     const correo = document.getElementById('ob-correo').value.trim();
     const direccion = document.getElementById('ob-direccion').value.trim();
+    const rol = document.getElementById('ob-rol').value || 'auxiliar';
     if(!nombre || !direccion){ toast('Completa al menos nombre y dirección','err'); return; }
-    const payload = { nombre_completo:nombre, telefono, correo, direccion };
+    const payload = { nombre_completo:nombre, telefono, correo, direccion, rol };
     const { data, error } = await sb.from('auxiliares').update(payload).eq('id', State.session.auxiliar.id).select().single();
     if(error){ toast('No se pudo guardar el perfil','err'); return; }
     State.session.auxiliar = data;
@@ -1272,13 +1231,15 @@ const Aux = {
     document.getElementById('pf-telefono').value = a.telefono||'';
     document.getElementById('pf-correo').value = a.correo||'';
     document.getElementById('pf-direccion').value = a.direccion||'';
+    document.getElementById('pf-rol').value = a.rol||'auxiliar';
   },
   async saveProfile(){
     const payload = {
       nombre_completo: document.getElementById('pf-nombre').value.trim(),
       telefono: document.getElementById('pf-telefono').value.trim(),
       correo: document.getElementById('pf-correo').value.trim(),
-      direccion: document.getElementById('pf-direccion').value.trim()
+      direccion: document.getElementById('pf-direccion').value.trim(),
+      rol: document.getElementById('pf-rol').value || 'auxiliar'
     };
     const { data, error } = await sb.from('auxiliares').update(payload).eq('id', State.session.auxiliar.id).select().single();
     if(error){ toast('No se pudo guardar','err'); return; }
@@ -1332,7 +1293,11 @@ const Aux = {
     Aux.renderDias();
     toast('Registro eliminado','ok');
   },
+  _esTransportista(){
+    return !!(State.session && State.session.auxiliar && State.session.auxiliar.rol==='transportista');
+  },
   openRegistroForm(id){
+    if(Aux._esTransportista()) return Aux._openRegistroFormTransportista(id);
     State.editRegistroId = id||null;
     const editing = id ? State.registrosCache.find(r=>r.id===id) : null;
     State.productosEstampillado = (editing && editing.productos && editing.productos.length) ? JSON.parse(JSON.stringify(editing.productos)) : [];
@@ -1553,160 +1518,76 @@ const Aux = {
       Aux.renderDias();
     }
     toast('Registro guardado','ok');
-  }
-};
+  },
 
-/* ============================================================
-   TRANSPORTISTA: perfil / días / cuenta de cobro
-   ============================================================ */
-const TRANSPORTISTA_CONCEPTO = 'Trasporte tipo de pedidos TAT o entregas TAT';
-const TRANSPORTISTA_TARIFAS = {
-  'Zona bananera': 400000,
-  'Urbano camioneta': 232000,
-  'Urbano furgón': 247000
-};
+  /* ---- Formulario reducido y fijo para el rol Transportista ---- */
+  _openRegistroFormTransportista(id){
+    State.editRegistroId = id||null;
+    const editing = id ? State.registrosCache.find(r=>r.id===id) : null;
+    const opts = (arr, current) => arr.map(o=>`<option value="${esc(o)}" ${current===o?'selected':''}>${esc(o)}</option>`).join('') + `<option value="__nuevo__">+ Agregar nueva opción…</option>`;
 
-const Transportista = {
-  async saveOnboarding(){
-    const nombre = document.getElementById('obt-nombre').value.trim();
-    const telefono = document.getElementById('obt-telefono').value.trim();
-    const correo = document.getElementById('obt-correo').value.trim();
-    const direccion = document.getElementById('obt-direccion').value.trim();
-    if(!nombre || !direccion){ toast('Completa al menos nombre y dirección','err'); return; }
-    const payload = { nombre_completo:nombre, telefono, correo, direccion, tipo_usuario:'transportista' };
-    const { data, error } = await sb.from('auxiliares').update(payload).eq('id', State.session.auxiliar.id).select().single();
-    if(error){ toast('No se pudo guardar el perfil','err'); return; }
-    State.session.auxiliar = data;
-    UI.buildNav();
-    toast('Perfil guardado','ok');
-    UI.showApp('dias-transportista');
-  },
-  fillProfileForm(){
-    const t = State.session.auxiliar;
-    document.getElementById('pt-nombre').value = t.nombre_completo||'';
-    document.getElementById('pt-cedula').value = t.cedula||'';
-    document.getElementById('pt-telefono').value = t.telefono||'';
-    document.getElementById('pt-correo').value = t.correo||'';
-    document.getElementById('pt-direccion').value = t.direccion||'';
-  },
-  async saveProfile(){
-    const payload = {
-      nombre_completo:document.getElementById('pt-nombre').value.trim(),
-      telefono:document.getElementById('pt-telefono').value.trim(),
-      correo:document.getElementById('pt-correo').value.trim(),
-      direccion:document.getElementById('pt-direccion').value.trim(),
-      tipo_usuario:'transportista'
-    };
-    const { data, error } = await sb.from('auxiliares').update(payload).eq('id', State.session.auxiliar.id).select().single();
-    if(error){ toast('No se pudo guardar','err'); return; }
-    State.session.auxiliar = data;
-    UI.buildNav();
-    toast('Perfil actualizado','ok');
-  },
-  async changePin(){
-    const old = document.getElementById('pt-pin-old').value.trim();
-    const n1 = document.getElementById('pt-pin-new').value.trim();
-    const n2 = document.getElementById('pt-pin-new2').value.trim();
-    if(String(State.session.auxiliar.password)!==old){ toast('La contraseña actual no coincide','err'); return; }
-    if(!/^\d{4}$/.test(n1)){ toast('La nueva contraseña debe tener 4 dígitos','err'); return; }
-    if(n1!==n2){ toast('Las contraseñas nuevas no coinciden','err'); return; }
-    const { data, error } = await sb.from('auxiliares').update({password:n1}).eq('id', State.session.auxiliar.id).select().single();
-    if(error){ toast('No se pudo actualizar','err'); return; }
-    State.session.auxiliar = data;
-    document.getElementById('pt-pin-old').value='';
-    document.getElementById('pt-pin-new').value='';
-    document.getElementById('pt-pin-new2').value='';
-    toast('Contraseña actualizada','ok');
-  },
-  async renderDias(){
-    const { data, error } = await sb.from('registros').select('*').eq('auxiliar_id', State.session.auxiliar.id).order('fecha',{ascending:false});
-    if(error){ toast('No se pudieron cargar los días laborados','err'); return; }
-    State.registrosTransportistaCache = data||[];
-    const list = document.getElementById('dias-transportista-list');
-    if(!State.registrosTransportistaCache.length){ list.innerHTML='<div class="empty-state">Aún no has registrado días laborados.</div>'; return; }
-    list.innerHTML = State.registrosTransportistaCache.map(r=>`
-      <div class="ticket">
-        <span class="platebadge">${esc(r.placa||'-')}</span>
-        <div class="tk-main">
-          <div class="tk-date">${fmtDate(r.fecha)}</div>
-          <div class="tk-desc">${esc(r.tipo_servicio||'-')} · ${esc(r.concepto||TRANSPORTISTA_CONCEPTO)}</div>
-        </div>
-        <div class="tk-val">${money(r.valor)}</div>
-        <div class="ticket-actions">
-          <button class="btn btn-ghost btn-sm" onclick="Transportista.openRegistroForm('${r.id}')">Editar</button>
-          <button class="btn btn-danger btn-sm" onclick="Transportista.deleteRegistro('${r.id}')">Eliminar</button>
-        </div>
-      </div>`).join('');
-  },
-  _recalcValor(){
-    const ruta = document.getElementById('rt-tipo-ruta');
-    const valor = ruta ? (TRANSPORTISTA_TARIFAS[ruta.value]||0) : 0;
-    const valEl = document.getElementById('rt-valor');
-    if(valEl) valEl.value = valor;
-  },
-  openRegistroForm(id){
-    const cache = State.registrosTransportistaCache||[];
-    const editing = id ? cache.find(r=>r.id===id) : null;
-    const rutaActual = editing ? editing.tipo_servicio : 'Zona bananera';
-    const fechaActual = editing ? editing.fecha : todayISO();
+    const conceptoActual = editing ? editing.concepto : TRANSPORTISTA_CONCEPTOS[0];
+    const rutaActual = editing ? editing.tipo_servicio : '';
+
     openModal(`
       <h3>${editing?'Editar':'Nuevo'} día laborado</h3>
       <div class="grid2">
-        <div class="field"><label>Placa</label><input id="rt-placa" placeholder="Ej. ABC123" value="${esc(editing?editing.placa:'')}" maxlength="10" style="text-transform:uppercase;"></div>
-        <div class="field"><label>Fecha</label><input type="date" id="rt-fecha" value="${fechaActual}"></div>
+        <div class="field"><label>Fecha</label><input type="date" id="rf-fecha" value="${editing?editing.fecha:todayISO()}"></div>
+        <div class="field"><label>Placa</label>
+          <select id="rf-placa" onchange="Aux._maybeInlineAdd('placa')">${opts(State.catalogos.placas.map(p=>p.placa), editing?editing.placa:null)}</select>
+          <div class="inline-add hidden" id="add-placa-wrap"><input id="add-placa-input" placeholder="Nueva placa"><button class="btn btn-navy btn-sm" onclick="Aux._inlineSave('placas','placa','add-placa-input','rf-placa')">Guardar</button></div>
+        </div>
       </div>
-      <div class="field"><label>Ruta / estampillado</label>
-        <select id="rt-concepto" disabled>
-          <option value="${esc(TRANSPORTISTA_CONCEPTO)}" selected>${esc(TRANSPORTISTA_CONCEPTO)}</option>
+      <div class="field"><label>Ruta o estampillado</label>
+        <select id="rf-concepto-t">
+          ${TRANSPORTISTA_CONCEPTOS.map(c=>`<option value="${esc(c)}" ${conceptoActual===c?'selected':''}>${esc(c)}</option>`).join('')}
         </select>
       </div>
       <div class="field"><label>Tipo de ruta</label>
-        <select id="rt-tipo-ruta" onchange="Transportista._recalcValor()">
-          ${Object.keys(TRANSPORTISTA_TARIFAS).map(k=>`<option value="${esc(k)}" ${k===rutaActual?'selected':''}>${esc(k)}</option>`).join('')}
+        <select id="rf-tiporuta-t" onchange="Aux._recalcValorTransportista()">
+          <option value="">Selecciona…</option>
+          ${Object.keys(TRANSPORTISTA_TIPOS_RUTA).map(t=>`<option value="${esc(t)}" ${rutaActual===t?'selected':''}>${esc(t)}</option>`).join('')}
         </select>
       </div>
-      <div class="field"><label>Conductor</label><input id="rt-conductor" value="" disabled placeholder=""></div>
-      <div class="field"><label>Valor</label><input id="rt-valor" class="mono" value="0" disabled></div>
-      <p class="small-note">El valor se asigna automáticamente según el tipo de ruta y no puede modificarse.</p>
-      <button class="btn btn-primary btn-block" style="margin-top:6px;" onclick="Transportista.saveRegistro('${editing?editing.id:''}')">Guardar registro</button>
+      <div class="field" style="margin-top:14px;"><label>Valor del día</label><input id="rf-valor" class="mono" value="${editing?editing.valor:0}" disabled></div>
+      <button class="btn btn-primary btn-block" style="margin-top:6px;" onclick="Aux._saveRegistroTransportista()">Guardar registro</button>
     `);
-    setTimeout(()=>Transportista._recalcValor(),20);
+    setTimeout(()=>{ Aux._recalcValorTransportista(); }, 30);
   },
-  async saveRegistro(id){
-    const placa = document.getElementById('rt-placa').value.trim().toUpperCase();
-    const fecha = document.getElementById('rt-fecha').value;
-    const tipoRuta = document.getElementById('rt-tipo-ruta').value;
-    const valor = Number(document.getElementById('rt-valor').value)||0;
-    if(!placa || !fecha || !tipoRuta || !valor){ toast('Completa placa, fecha y tipo de ruta','err'); return; }
-    const payload = {
-      auxiliar_id:State.session.auxiliar.id,
-      fecha,
-      placa,
-      conductor:'',
-      valor,
-      tipo_servicio:tipoRuta,
-      concepto:TRANSPORTISTA_CONCEPTO,
-      productos:[],
-      ciudad:'',
-      actividad:`${TRANSPORTISTA_CONCEPTO} - ${tipoRuta}`,
-      firma:'',
-      es_descuento:false,
-      creado_por:'transportista'
-    };
+  _recalcValorTransportista(){
+    const sel = document.getElementById('rf-tiporuta-t');
+    const tipoRuta = sel ? sel.value : '';
+    const valor = TRANSPORTISTA_TIPOS_RUTA[tipoRuta] || 0;
+    document.getElementById('rf-valor').value = valor;
+  },
+  async _saveRegistroTransportista(){
+    const fecha = document.getElementById('rf-fecha').value;
+    const placa = document.getElementById('rf-placa').value;
+    const concepto = document.getElementById('rf-concepto-t').value;
+    const tipo_servicio = document.getElementById('rf-tiporuta-t').value;
+    const valor = Number(document.getElementById('rf-valor').value)||0;
+
+    if(placa==='__nuevo__'){ toast('Guarda la placa nueva antes de continuar','err'); return; }
+    if(!fecha || !placa){ toast('Completa la fecha y la placa','err'); return; }
+    if(!tipo_servicio){ toast('Selecciona el tipo de ruta','err'); return; }
+
+    const actividad = `${concepto} - ${tipo_servicio}`;
+    const payload = { auxiliar_id: State.session.auxiliar.id, fecha, placa, conductor:'', valor, tipo_servicio, concepto, productos:[], ciudad:'', actividad, firma:'', es_descuento:false, creado_por:'auxiliar' };
+
     let error;
-    if(id) ({error}=await sb.from('registros').update(payload).eq('id',id));
-    else ({error}=await sb.from('registros').insert(payload));
-    if(error){ toast('No se pudo guardar el registro: '+error.message,'err'); return; }
+    if(State.editRegistroId){
+      ({ error } = await sb.from('registros').update(payload).eq('id', State.editRegistroId));
+    } else {
+      ({ error } = await sb.from('registros').insert(payload));
+    }
+    if(error){ toast('No se pudo guardar el registro','err'); return; }
     closeModal();
-    await Transportista.renderDias();
-    toast('Día laborado guardado','ok');
-  },
-  async deleteRegistro(id){
-    if(!confirm('¿Eliminar este día laborado?')) return;
-    const { error } = await sb.from('registros').delete().eq('id',id).eq('auxiliar_id',State.session.auxiliar.id);
-    if(error){ toast('No se pudo eliminar','err'); return; }
-    Transportista.renderDias();
-    toast('Registro eliminado','ok');
+    if(State.session && State.session.tipo==='quick'){
+      QuickRegistro.onSaved();
+    } else {
+      Aux.renderDias();
+    }
+    toast('Registro guardado','ok');
   }
 };
 
@@ -1936,45 +1817,12 @@ const Conductor = {
 /* ============================================================
    GENERACIÓN DE PDF — CUENTA DE COBRO
    ============================================================ */
-function numeroALetras(num){
-  num = Math.round(Number(num)||0);
-  if(num===0) return 'cero';
-  const unidades=['cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte'];
-  const decenas=['','','veinte','treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'];
-  const centenas=['','ciento','doscientos','trescientos','cuatrocientos','quinientos','seiscientos','setecientos','ochocientos','novecientos'];
-  function under100(n){
-    if(n<=20) return unidades[n];
-    if(n<30) return n===20?'veinte':'veinti'+unidades[n-20];
-    const d=Math.floor(n/10), u=n%10; return decenas[d]+(u?' y '+unidades[u]:'');
-  }
-  function under1000(n){
-    if(n<100) return under100(n);
-    if(n===100) return 'cien';
-    const c=Math.floor(n/100), r=n%100; return centenas[c]+(r?' '+under100(r):'');
-  }
-  function grupo(n){
-    if(n<1000) return under1000(n);
-    if(n<1000000){ const miles=Math.floor(n/1000), r=n%1000; return (miles===1?'mil':under1000(miles)+' mil')+(r?' '+under1000(r):''); }
-    if(n<1000000000){ const mill=Math.floor(n/1000000), r=n%1000000; return (mill===1?'un millón':under1000(mill)+' millones')+(r?' '+grupo(r):''); }
-    const bill=Math.floor(n/1000000000), r=n%1000000000; return (bill===1?'mil millones':grupo(bill)+' mil millones')+(r?' '+grupo(r):'');
-  }
-  return grupo(num);
-}
-
 const Reportes = {
   async _fetchRegistros(auxiliarId, desde, hasta){
     let q = sb.from('registros').select('*').eq('auxiliar_id', auxiliarId).order('fecha',{ascending:true});
     if(desde) q = q.gte('fecha', desde);
     if(hasta) q = q.lte('fecha', hasta);
     const { data } = await q;
-    return data||[];
-  },
-  async _fetchTransportistaRegistros(auxiliarId, desde, hasta){
-    let q = sb.from('registros').select('*').eq('auxiliar_id', auxiliarId).eq('creado_por','transportista').eq('concepto',TRANSPORTISTA_CONCEPTO).order('fecha',{ascending:true});
-    if(desde) q=q.gte('fecha',desde);
-    if(hasta) q=q.lte('fecha',hasta);
-    const { data, error } = await q;
-    if(error){ toast('No se pudieron cargar los registros del transportista','err'); return []; }
     return data||[];
   },
   async _fetchGastos(conductorId, desde, hasta){
@@ -2083,85 +1931,119 @@ const Reportes = {
       </div>
     </div>`;
   },
-  buildCuentaCobroTransportistaHTML(transportista, registros, desde, hasta){
-    const rows = registros.slice().sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
-    const porPlaca = {};
-    rows.forEach(r=>{ const placa=r.placa||'-'; porPlaca[placa]=(porPlaca[placa]||0)+1; });
-    const placas = Object.keys(porPlaca).sort();
-    const totalDias = rows.length;
-    const total = rows.reduce((s,r)=>s+Number(r.valor||0),0);
-    const filasDias = rows.map(r=>`<tr><td>${esc(r.placa||'-')}</td><td>${fmtDate(r.fecha)}</td></tr>`).join('') || '<tr><td colspan="2" style="text-align:center;">Sin días registrados en el periodo</td></tr>';
-    const filasResumen = placas.map(p=>`<tr><td>${esc(p)}</td><td style="text-align:center;">${porPlaca[p]}</td></tr>`).join('') || '<tr><td colspan="2" style="text-align:center;">Sin registros</td></tr>';
-    const desdeTxt = fmtDate(desde)||'—';
-    const hastaTxt = fmtDate(hasta)||'—';
-    const fechaHoy = fmtDate(todayISO());
-    return `
-    <div class="doc-page transportista-doc">
-      <div class="doc-fecha">${fechaHoy}</div>
-      <div style="text-align:center;font-weight:700;font-size:22px;margin-bottom:8px;">CUENTA DE COBRO</div>
-      <div style="text-align:center;font-weight:700;">LICONSUMAR DEL MAGDALENA SAS</div>
-      <div style="text-align:center;margin-bottom:18px;">NIT 900.988.612-2</div>
+  /* ---- Cuenta de cobro para Transportista: usa la plantilla oficial en Excel ---- */
+  async buildCuentaCobroTransportistaXLSX(transportista, registros, desde, hasta){
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(b64ToArrayBuffer(TRANSPORTISTA_PLANTILLA_XLSX_B64));
+    const ws = wb.worksheets[0];
 
-      <div style="font-weight:700;margin-bottom:8px;">Debe a:</div>
-      <table class="doc-table" style="margin-bottom:18px;">
-        <tbody>
-          <tr><td style="width:28%;"><b>Nombre:</b></td><td>${esc(transportista.nombre_completo||'')}</td></tr>
-          <tr><td><b>Cédula (C.C.):</b></td><td>${esc(transportista.cedula||'')}</td></tr>
-          <tr><td><b>Concepto:</b></td><td>TRASPORTE DE PEDIDOS TAT</td></tr>
-        </tbody>
-      </table>
+    const styleOf = (coord) => JSON.parse(JSON.stringify(ws.getCell(coord).style));
+    const headerStyle = styleOf('A13');   // encabezado azul, texto blanco, negrilla, con borde
+    const dataStyle   = styleOf('A20');   // celda de datos con borde, centrada
+    const moneyDataStyle = styleOf('B14'); // celda de datos con borde y formato moneda
+    const boldTotalStyle = styleOf('A31'); // fila de totales, negrilla, con borde
 
-      <div style="font-weight:700;margin-bottom:6px;">Valores de referencia por día</div>
-      <table class="doc-table" style="margin-bottom:18px;">
-        <thead><tr><th>Tipo de ruta</th><th style="text-align:right;">Valor por día</th></tr></thead>
-        <tbody>
-          <tr><td>Zona bananera</td><td style="text-align:right;">${money(400000)}</td></tr>
-          <tr><td>Urbano camioneta</td><td style="text-align:right;">${money(232000)}</td></tr>
-          <tr><td>Urbano furgón</td><td style="text-align:right;">${money(247000)}</td></tr>
-        </tbody>
-      </table>
+    const registrosOrdenados = [...registros].sort((a,b)=> (a.fecha<b.fecha?-1: a.fecha>b.fecha?1: String(a.placa).localeCompare(String(b.placa))));
 
-      <div style="font-weight:700;margin-bottom:6px;">Días registrados por placa</div>
-      <table class="doc-table" style="margin-bottom:18px;">
-        <thead><tr><th>Placa</th><th>Fecha</th></tr></thead>
-        <tbody>${filasDias}</tbody>
-      </table>
+    // Limpia todo el bloque dinámico (desde "Días registrados por placa" en adelante)
+    // para que no queden restos de la plantilla original cuando el contenido generado
+    // ocupe más o menos filas que el diseño original.
+    for(let rr=18; rr<=200; rr++){
+      ['A','B','C','D'].forEach(col=>{
+        const cell = ws.getCell(`${col}${rr}`);
+        cell.value = null;
+        cell.style = {};
+      });
+    }
 
-      <div style="font-weight:700;margin-bottom:6px;">Resumen por placa</div>
-      <table class="doc-table" style="margin-bottom:8px;">
-        <thead><tr><th>Placa</th><th>Total días</th></tr></thead>
-        <tbody>${filasResumen}</tbody>
-        <tfoot><tr class="doc-total-row"><td>Total de días</td><td style="text-align:center;">${totalDias}</td></tr></tfoot>
-      </table>
+    // Encabezado y datos del transportista
+    ws.getCell('A1').value = `Fecha de generación: ${fmtDate(todayISO())}`;
+    ws.getCell('B8').value = (transportista.nombre_completo||'').toUpperCase();
+    ws.getCell('B9').value = transportista.cedula||'';
+    ws.getCell('B10').value = 'TRASPORTE DE PEDIDOS TAT' + (desde||hasta ? ` (Periodo: ${fmtDate(desde)||'—'} al ${fmtDate(hasta)||'—'})` : '');
 
-      <table class="doc-table" style="margin-top:18px;">
-        <tr class="doc-total-row"><td>TOTAL A PAGAR</td><td style="text-align:right;">${money(total)}</td></tr>
-      </table>
-      <div class="doc-pagar">En letras: ${esc(numeroALetras(total))} pesos</div>
-      <div class="small-note" style="margin-bottom:12px;">Periodo laborado: ${desdeTxt} al ${hastaTxt}</div>
+    let r = 18;
+    ws.getCell(`A${r}`).value = 'Días registrados por placa'; r++;
+    ws.getCell(`A${r}`).value = 'Placa'; ws.getCell(`A${r}`).style = headerStyle;
+    ws.getCell(`B${r}`).value = 'Fecha'; ws.getCell(`B${r}`).style = headerStyle;
+    ws.getCell(`C${r}`).value = 'Valor día'; ws.getCell(`C${r}`).style = headerStyle;
+    ws.getColumn(3).width = 20;
+    r++;
+    const detailFirstRow = r;
+    const filas = registrosOrdenados.length ? registrosOrdenados : [null];
+    filas.forEach(reg=>{
+      ws.getCell(`A${r}`).value = reg ? (reg.placa||'') : '';
+      ws.getCell(`A${r}`).style = dataStyle;
+      if(reg && reg.fecha){
+        const [y,m,d] = reg.fecha.split('-').map(Number);
+        ws.getCell(`B${r}`).value = new Date(Date.UTC(y,m-1,d));
+        ws.getCell(`B${r}`).numFmt = 'dd/mm/yyyy';
+      }
+      ws.getCell(`B${r}`).style = Object.assign({}, dataStyle, {numFmt:'dd/mm/yyyy'});
+      ws.getCell(`C${r}`).value = reg ? Number(reg.valor||0) : 0;
+      ws.getCell(`C${r}`).style = moneyDataStyle;
+      r++;
+    });
+    const detailLastRow = r-1;
 
-      <div style="font-weight:700;margin-top:18px;margin-bottom:6px;">Datos del cobrador</div>
-      <table class="doc-table">
-        <tbody>
-          <tr><td style="width:28%;"><b>Nombre:</b></td><td>${esc(transportista.nombre_completo||'')}</td></tr>
-          <tr><td><b>C.C.:</b></td><td>${esc(transportista.cedula||'')}</td></tr>
-          <tr><td><b>Dirección:</b></td><td>${esc(transportista.direccion||'')}</td></tr>
-          <tr><td><b>Email:</b></td><td>${esc(transportista.correo||'')}</td></tr>
-          <tr><td><b>Teléfono:</b></td><td>${esc(transportista.telefono||'')}</td></tr>
-        </tbody>
-      </table>
-    </div>`;
+    r++; // fila en blanco
+    ws.getCell(`A${r}`).value = 'Resumen por placa'; r++;
+    ws.getCell(`A${r}`).value = 'Placa'; ws.getCell(`A${r}`).style = headerStyle;
+    ws.getCell(`B${r}`).value = 'Total días'; ws.getCell(`B${r}`).style = headerStyle;
+    r++;
+    const placasUnicas = [...new Set(registrosOrdenados.map(x=>x.placa).filter(Boolean))];
+    const resumenFirstRow = r;
+    if(!placasUnicas.length){
+      ws.getCell(`A${r}`).value = '—'; ws.getCell(`A${r}`).style = dataStyle;
+      ws.getCell(`B${r}`).value = 0; ws.getCell(`B${r}`).style = dataStyle;
+      r++;
+    } else {
+      placasUnicas.forEach(pl=>{
+        ws.getCell(`A${r}`).value = pl; ws.getCell(`A${r}`).style = dataStyle;
+        ws.getCell(`B${r}`).value = { formula: `COUNTIF(A${detailFirstRow}:A${detailLastRow},A${r})` };
+        ws.getCell(`B${r}`).style = dataStyle;
+        r++;
+      });
+    }
+    const resumenLastRow = r-1;
+
+    ws.getCell(`A${r}`).value = 'Total de días'; ws.getCell(`A${r}`).style = boldTotalStyle;
+    ws.getCell(`B${r}`).value = { formula: `SUM(B${resumenFirstRow}:B${resumenLastRow})` };
+    ws.getCell(`B${r}`).style = boldTotalStyle;
+    r+=2;
+
+    const totalPagar = registrosOrdenados.reduce((s,x)=>s+Number(x.valor||0),0);
+    ws.getCell(`A${r}`).value = 'TOTAL A PAGAR'; ws.getCell(`A${r}`).style = boldTotalStyle;
+    ws.getCell(`B${r}`).value = { formula: `SUM(C${detailFirstRow}:C${detailLastRow})` };
+    ws.getCell(`B${r}`).style = moneyDataStyle;
+    ws.getCell(`B${r}`).font = { bold:true };
+    const totalPagarRow = r;
+    r++;
+    ws.getCell(`A${r}`).value = 'En letras:';
+    ws.getCell(`B${r}`).value = numeroALetras(totalPagar);
+    r+=2;
+
+    ws.getCell(`A${r}`).value = 'Datos del cobrador'; r++;
+    ws.getCell(`A${r}`).value = 'Nombre:'; ws.getCell(`B${r}`).value = 'Fabian Riveros Bermúdez'; r++;
+    ws.getCell(`A${r}`).value = 'C.C.:'; ws.getCell(`B${r}`).value = '1.081.785.933 de Palmar de Varela'; r++;
+    ws.getCell(`A${r}`).value = 'Dirección:'; ws.getCell(`B${r}`).value = 'Calle 12 # 9 - 115, Gaira'; r++;
+    ws.getCell(`A${r}`).value = 'Email:'; ws.getCell(`B${r}`).value = 'riverosbermudez15@gmail.com'; r++;
+    ws.getCell(`A${r}`).value = 'Teléfono:'; ws.getCell(`B${r}`).value = '3016832367';
+
+    void totalPagarRow;
+    return wb;
   },
-  async generarTransportista(){
-    const desde = document.getElementById('rept-desde').value;
-    const hasta = document.getElementById('rept-hasta').value;
-    if(desde && hasta && desde>hasta){ toast('La fecha Desde no puede ser mayor que Hasta','err'); return; }
-    const t = State.session.auxiliar;
-    const registros = await this._fetchTransportistaRegistros(t.id, desde||null, hasta||null);
-    const html = this.buildCuentaCobroTransportistaHTML(t, registros, desde||null, hasta||null);
-    this.mostrarPreview(html, `cuenta_de_cobro_transportista_${t.cedula}.pdf`);
+  async generarCuentaCobroTransportista(transportista, registros, desde, hasta){
+    const wb = await Reportes.buildCuentaCobroTransportistaXLSX(transportista, registros, desde, hasta);
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `cuenta_de_cobro_${transportista.cedula}.xlsx`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    toast('Cuenta de cobro (Excel) generada','ok');
   },
-
   async _exportNode(html, filename){
     const root = document.getElementById('print-root');
     root.innerHTML = html;
@@ -2226,25 +2108,29 @@ const Reportes = {
     Reportes._pendingHtml = null;
     Reportes._pendingFilename = null;
   },
+  actualizarBotonAuxiliar(){
+    const aux = State.session && State.session.auxiliar;
+    const btn = document.getElementById('rep-btn-generar');
+    if(!btn || !aux) return;
+    if(aux.rol==='transportista'){
+      btn.textContent = 'Generar cuenta de cobro (Excel)';
+      document.getElementById('view-sub').textContent = 'Genera tu cuenta de cobro en Excel a partir de tus días registrados';
+    } else {
+      btn.textContent = 'Generar reporte en PDF';
+      document.getElementById('view-sub').textContent = 'Genera tu cuenta de cobro en PDF';
+    }
+  },
   async generarAuxiliar(){
-    if(State.session && State.session.tipo!=='auxiliar'){ toast('Esta cuenta de cobro es solo para auxiliares','err'); return; }
     const desde = document.getElementById('rep-desde').value;
     const hasta = document.getElementById('rep-hasta').value;
     const aux = State.session.auxiliar;
     const registros = await Reportes._fetchRegistros(aux.id, desde||null, hasta||null);
+    if(aux.rol==='transportista'){
+      await Reportes.generarCuentaCobroTransportista(aux, registros, desde||null, hasta||null);
+      return;
+    }
     const html = Reportes.buildCuentaCobroHTML(aux, registros, desde||null, hasta||null);
     Reportes.mostrarPreview(html, `cuenta_de_cobro_${aux.cedula}.pdf`);
-  },
-  async generarAdminTransportista(){
-    const id = document.getElementById('admrep-transportista').value;
-    if(!id){ toast('Selecciona un transportista','err'); return; }
-    const desde = document.getElementById('admrept-desde').value;
-    const hasta = document.getElementById('admrept-hasta').value;
-    if(desde && hasta && desde>hasta){ toast('La fecha Desde no puede ser mayor que Hasta','err'); return; }
-    const t = State.auxiliaresCache.find(a=>a.id===id);
-    const registros = await this._fetchTransportistaRegistros(id, desde||null, hasta||null);
-    const html = this.buildCuentaCobroTransportistaHTML(t, registros, desde||null, hasta||null);
-    this.mostrarPreview(html, `cuenta_de_cobro_transportista_${t.cedula}.pdf`);
   },
   async generarAdmin(){
     const auxId = document.getElementById('admrep-auxiliar').value;
@@ -2253,6 +2139,10 @@ const Reportes = {
     const hasta = document.getElementById('admrep-hasta').value;
     const aux = State.auxiliaresCache.find(a=>a.id===auxId);
     const registros = await Reportes._fetchRegistros(auxId, desde, hasta);
+    if(aux.rol==='transportista'){
+      await Reportes.generarCuentaCobroTransportista(aux, registros, desde||null, hasta||null);
+      return;
+    }
     const html = Reportes.buildCuentaCobroHTML(aux, registros, desde, hasta);
     Reportes.mostrarPreview(html, `cuenta_de_cobro_${aux.cedula}.pdf`);
   }
@@ -2337,13 +2227,13 @@ const AdminMod = {
       <tr>
         <td>${esc(a.nombre_completo)||'<span class="small-note">Sin completar</span>'}</td>
         <td class="mono">${esc(a.cedula)}</td>
-        <td>${a.tipo_usuario==='transportista'?'<span class="pill pill-navy">Transportista</span>':'<span class="pill pill-orange">Auxiliar</span>'}</td>
+        <td>${a.rol==='transportista'?'Transportista':'Auxiliar'}</td>
         <td>${esc(a.telefono)||'-'}</td>
         <td style="white-space:nowrap;">
           <button class="btn btn-navy btn-sm" onclick="AdminMod.verAuxiliar('${a.id}')">Ver</button>
           <button class="btn btn-danger btn-sm" onclick="AdminMod.eliminarAuxiliar('${a.id}')">Eliminar</button>
         </td>
-      </tr>`).join('') || `<tr><td colspan="5" class="empty-state">Sin usuarios registrados</td></tr>`;
+      </tr>`).join('') || `<tr><td colspan="5" class="empty-state">Sin auxiliares registrados</td></tr>`;
   },
   async eliminarAuxiliar(id){
     const a = State.auxiliaresCache.find(x=>x.id===id);
@@ -2358,7 +2248,7 @@ const AdminMod = {
       document.getElementById('auxiliar-detalle').innerHTML = '';
     }
     await AdminMod.renderAuxiliares();
-    toast('Usuario y sus registros fueron eliminados','ok');
+    toast('Auxiliar y sus registros fueron eliminados','ok');
   },
   async verAuxiliar(id){
     State.auxDetalleAbierto = id;
@@ -2381,11 +2271,17 @@ const AdminMod = {
           <div class="field"><label>Dirección</label><input id="da-direccion" value="${esc(a.direccion)}"></div>
           <div class="field"><label>Contraseña (4 dígitos)</label><input id="da-pass" value="${esc(a.password)}" class="mono"></div>
         </div>
+        <div class="field" style="max-width:260px;"><label>Tipo</label>
+          <select id="da-rol">
+            <option value="auxiliar" ${a.rol!=='transportista'?'selected':''}>Auxiliar</option>
+            <option value="transportista" ${a.rol==='transportista'?'selected':''}>Transportista</option>
+          </select>
+        </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-navy btn-sm" onclick="AdminMod.guardarPerfilAux('${id}')">Guardar cambios</button>
-          ${a.tipo_usuario==='transportista' ? '' : `<button class="btn btn-primary btn-sm" onclick="AdminMod.abrirDescuento('${id}')">+ Agregar descuento</button>`}
-          ${a.tipo_usuario==='transportista' ? `<button class="btn btn-primary btn-sm" onclick="AdminMod.pdfTransportista('${id}')">Generar cuenta de cobro</button>` : `<button class="btn btn-ghost btn-sm" onclick="AdminMod.pdfAuxiliar('${id}')">Generar PDF del registro</button>`}
-          <button class="btn btn-danger btn-sm" onclick="AdminMod.eliminarAuxiliar('${id}')">Eliminar usuario</button>
+          <button class="btn btn-primary btn-sm" onclick="AdminMod.abrirDescuento('${id}')">+ Agregar descuento</button>
+          <button class="btn btn-ghost btn-sm" onclick="AdminMod.pdfAuxiliar('${id}')">Generar PDF del registro</button>
+          <button class="btn btn-danger btn-sm" onclick="AdminMod.eliminarAuxiliar('${id}')">Eliminar auxiliar</button>
         </div>
       </div>
       <div class="card">
@@ -2413,7 +2309,8 @@ const AdminMod = {
       telefono: document.getElementById('da-telefono').value.trim(),
       correo: document.getElementById('da-correo').value.trim(),
       direccion: document.getElementById('da-direccion').value.trim(),
-      password: document.getElementById('da-pass').value.trim()
+      password: document.getElementById('da-pass').value.trim(),
+      rol: document.getElementById('da-rol').value || 'auxiliar'
     };
     const { error } = await sb.from('auxiliares').update(payload).eq('id', id);
     if(error){ toast('No se pudo guardar','err'); return; }
@@ -2445,13 +2342,6 @@ const AdminMod = {
     closeModal();
     AdminMod.verAuxiliar(auxId);
     toast('Descuento aplicado','ok');
-  },
-  async pdfTransportista(id){
-    const t = State.auxiliaresCache.find(x=>x.id===id);
-    if(!t || t.tipo_usuario!=='transportista'){ toast('El usuario seleccionado no es transportista','err'); return; }
-    const registros = await Reportes._fetchTransportistaRegistros(id, null, null);
-    const html = Reportes.buildCuentaCobroTransportistaHTML(t, registros, registros[0]?.fecha, registros[registros.length-1]?.fecha);
-    Reportes.mostrarPreview(html, `cuenta_de_cobro_transportista_${t.cedula}.pdf`);
   },
   async pdfAuxiliar(auxId){
     const a = State.auxiliaresCache.find(x=>x.id===auxId);
@@ -2590,20 +2480,22 @@ const AdminMod = {
   },
   fillAuxSelect(){
     const sel = document.getElementById('admrep-auxiliar');
-    sel.innerHTML = '<option value="">Selecciona…</option>' + State.auxiliaresCache.filter(a=>a.tipo_usuario!=='transportista').map(a=>`<option value="${a.id}">${esc(a.nombre_completo||a.cedula)} (CC ${esc(a.cedula)})</option>`).join('');
+    sel.innerHTML = '<option value="">Selecciona…</option>' + State.auxiliaresCache.map(a=>`<option value="${a.id}">${esc(a.nombre_completo||a.cedula)} (CC ${esc(a.cedula)}) · ${a.rol==='transportista'?'Transportista':'Auxiliar'}</option>`).join('');
     if(!State.auxiliaresCache.length){
       sb.from('auxiliares').select('*').then(({data})=>{
         State.auxiliaresCache = data||[];
-        sel.innerHTML = '<option value="">Selecciona…</option>' + State.auxiliaresCache.filter(a=>a.tipo_usuario!=='transportista').map(a=>`<option value="${a.id}">${esc(a.nombre_completo||a.cedula)} (CC ${esc(a.cedula)})</option>`).join('');
+        sel.innerHTML = '<option value="">Selecciona…</option>' + State.auxiliaresCache.map(a=>`<option value="${a.id}">${esc(a.nombre_completo||a.cedula)} (CC ${esc(a.cedula)}) · ${a.rol==='transportista'?'Transportista':'Auxiliar'}</option>`).join('');
+        AdminMod.actualizarBotonReporte();
       });
     }
+    AdminMod.actualizarBotonReporte();
   },
-  fillTransportistaSelect(){
-    const sel = document.getElementById('admrep-transportista');
-    if(!sel) return;
-    const build = arr => { sel.innerHTML = '<option value="">Selecciona…</option>' + arr.filter(a=>a.tipo_usuario==='transportista').map(a=>`<option value="${a.id}">${esc(a.nombre_completo||a.cedula)} (CC ${esc(a.cedula)})</option>`).join(''); };
-    if(State.auxiliaresCache.length) build(State.auxiliaresCache);
-    else sb.from('auxiliares').select('*').then(({data})=>{ State.auxiliaresCache=data||[]; build(State.auxiliaresCache); });
+  actualizarBotonReporte(){
+    const sel = document.getElementById('admrep-auxiliar');
+    const btn = document.getElementById('admrep-btn-generar');
+    if(!sel || !btn) return;
+    const aux = State.auxiliaresCache.find(a=>a.id===sel.value);
+    btn.textContent = (aux && aux.rol==='transportista') ? 'Generar cuenta de cobro (Excel)' : 'Generar reporte en PDF';
   }
 };
 
@@ -2731,7 +2623,7 @@ const QuickRegistro = {
     const cedula = document.getElementById('qr-cedula').value.trim();
     if(!cedula){ toast('Ingresa tu número de cédula','err'); return; }
     const { data, error } = await sb.from('auxiliares').select('*').eq('cedula', cedula).maybeSingle();
-    if(error || !data || data.tipo_usuario==='transportista'){ toast('El registro rápido por QR está habilitado solo para auxiliares.','err'); return; }
+    if(error || !data){ toast('No encontramos esa cédula. Verifica el número o crea tu cuenta desde la app.','err'); return; }
     if(!data.nombre_completo){ toast('Tu perfil aún no está completo. Ingresa a la app con tu cédula y contraseña para completarlo primero.','err'); return; }
     QuickRegistro.auxiliar = data;
     document.getElementById('qr-found-name').textContent = data.nombre_completo;
