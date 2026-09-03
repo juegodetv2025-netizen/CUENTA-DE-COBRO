@@ -957,7 +957,7 @@ const Auth = {
     const { data: existing } = await sb.from('auxiliares').select('id').eq('cedula', cedula).maybeSingle();
     if(existing){ toast('Esa cédula ya está registrada. Inicia sesión.','err'); return; }
     const pin = rand4();
-    const { data, error } = await sb.from('auxiliares').insert({ cedula, password: pin, rol }).select().single();
+    const { data, error } = await sb.from('auxiliares').insert({ cedula, password: pin, tipo_usuario: rol }).select().single();
     if(error){ toast('No se pudo crear la cuenta: '+error.message,'err'); return; }
     openModal(`
       <h3>Cuenta creada</h3>
@@ -1047,7 +1047,7 @@ const Bootstrap = {
       const aux = State.session.auxiliar;
       if(!aux.nombre_completo){
         UI.showApp('onboarding');
-        setTimeout(()=>{ document.getElementById('ob-rol').value = aux.rol||'auxiliar'; }, 30);
+        setTimeout(()=>{ document.getElementById('ob-rol').value = aux.tipo_usuario||'auxiliar'; }, 30);
       } else {
         UI.showApp('dias');
       }
@@ -1217,7 +1217,7 @@ const Aux = {
     const direccion = document.getElementById('ob-direccion').value.trim();
     const rol = document.getElementById('ob-rol').value || 'auxiliar';
     if(!nombre || !direccion){ toast('Completa al menos nombre y dirección','err'); return; }
-    const payload = { nombre_completo:nombre, telefono, correo, direccion, rol };
+    const payload = { nombre_completo:nombre, telefono, correo, direccion, tipo_usuario: rol };
     const { data, error } = await sb.from('auxiliares').update(payload).eq('id', State.session.auxiliar.id).select().single();
     if(error){ toast('No se pudo guardar el perfil','err'); return; }
     State.session.auxiliar = data;
@@ -1231,7 +1231,7 @@ const Aux = {
     document.getElementById('pf-telefono').value = a.telefono||'';
     document.getElementById('pf-correo').value = a.correo||'';
     document.getElementById('pf-direccion').value = a.direccion||'';
-    document.getElementById('pf-rol').value = a.rol||'auxiliar';
+    document.getElementById('pf-rol').value = a.tipo_usuario||'auxiliar';
   },
   async saveProfile(){
     const payload = {
@@ -1239,7 +1239,7 @@ const Aux = {
       telefono: document.getElementById('pf-telefono').value.trim(),
       correo: document.getElementById('pf-correo').value.trim(),
       direccion: document.getElementById('pf-direccion').value.trim(),
-      rol: document.getElementById('pf-rol').value || 'auxiliar'
+      tipo_usuario: document.getElementById('pf-rol').value || 'auxiliar'
     };
     const { data, error } = await sb.from('auxiliares').update(payload).eq('id', State.session.auxiliar.id).select().single();
     if(error){ toast('No se pudo guardar','err'); return; }
@@ -1294,7 +1294,7 @@ const Aux = {
     toast('Registro eliminado','ok');
   },
   _esTransportista(){
-    return !!(State.session && State.session.auxiliar && State.session.auxiliar.rol==='transportista');
+    return !!(State.session && State.session.auxiliar && State.session.auxiliar.tipo_usuario==='transportista');
   },
   openRegistroForm(id){
     if(Aux._esTransportista()) return Aux._openRegistroFormTransportista(id);
@@ -1931,6 +1931,44 @@ const Reportes = {
       </div>
     </div>`;
   },
+  /* ---- vista previa (HTML) de la cuenta de cobro del transportista, antes del Excel ---- */
+  buildCuentaCobroTransportistaPreviewHTML(transportista, registros, desde, hasta){
+    const registrosOrdenados = [...registros].sort((a,b)=> (a.fecha<b.fecha?-1: a.fecha>b.fecha?1: String(a.placa).localeCompare(String(b.placa))));
+    const total = registrosOrdenados.reduce((s,r)=>s+Number(r.valor||0),0);
+    const placasUnicas = [...new Set(registrosOrdenados.map(x=>x.placa).filter(Boolean))];
+    const diasPorPlaca = placasUnicas.map(pl=>({placa:pl, dias: registrosOrdenados.filter(r=>r.placa===pl).length}));
+    const fechaHoy = fmtDate(todayISO());
+    const filasDetalle = registrosOrdenados.map(r=>`<tr><td>${esc(r.placa||'')}</td><td>${fmtDate(r.fecha)}</td><td>${money(r.valor)}</td></tr>`).join('');
+    const filasResumen = diasPorPlaca.map(p=>`<tr><td>${esc(p.placa)}</td><td>${p.dias}</td></tr>`).join('');
+    return `
+    <div class="doc-page">
+      <div class="doc-fecha">${fechaHoy}</div>
+      <div class="doc-senores">Señores</div>
+      <div class="doc-empresa">LICONSUMAR DEL MAGDALENA S.A.S</div>
+      <div class="doc-nit">900.988.612-2</div>
+      <div class="doc-ref">Ref. cuenta de cobro (Transportista)</div>
+      <div class="doc-debe">debe a:</div>
+      <div class="doc-concepto"><b>${esc((transportista.nombre_completo||'').toUpperCase())}</b>, C.C. ${esc(transportista.cedula||'')}, por concepto de TRASPORTE DE PEDIDOS TAT, correspondiente al periodo ${fmtDate(desde)||'—'} al ${fmtDate(hasta)||'—'}.</div>
+      <div style="font-weight:700;margin:14px 0 6px;">Días registrados por placa</div>
+      <table class="doc-table">
+        <thead><tr><th>Placa</th><th>Fecha</th><th>Valor día</th></tr></thead>
+        <tbody>${filasDetalle || `<tr><td colspan="3" style="text-align:center;">Sin registros en el periodo</td></tr>`}</tbody>
+      </table>
+      <div style="font-weight:700;margin:14px 0 6px;">Resumen por placa</div>
+      <table class="doc-table">
+        <thead><tr><th>Placa</th><th>Total días</th></tr></thead>
+        <tbody>${filasResumen || `<tr><td colspan="2" style="text-align:center;">—</td></tr>`}</tbody>
+      </table>
+      <div class="doc-pagar">Total a pagar………………………………………………………( ${money(total)} ) pesos</div>
+      <div style="margin-top:6px;">En letras: ${esc(numeroALetras(total))}</div>
+      <div style="font-weight:700;margin:14px 0 6px;">Datos del cobrador</div>
+      <div>Nombre: Fabian Riveros Bermúdez</div>
+      <div>C.C.: 1.081.785.933 de Palmar de Varela</div>
+      <div>Dirección: Calle 12 # 9 - 115, Gaira</div>
+      <div>Email: riverosbermudez15@gmail.com</div>
+      <div>Teléfono: 3016832367</div>
+    </div>`;
+  },
   /* ---- Cuenta de cobro para Transportista: usa la plantilla oficial en Excel ---- */
   async buildCuentaCobroTransportistaXLSX(transportista, registros, desde, hasta){
     const wb = new ExcelJS.Workbook();
@@ -2070,7 +2108,8 @@ const Reportes = {
   /* ---- vista previa amplia antes de generar el PDF (todos los roles) ---- */
   _pendingHtml:null,
   _pendingFilename:null,
-  mostrarPreview(html, filename){
+  mostrarPreview(html, filename, opts){
+    opts = opts || {};
     Reportes._pendingHtml = html;
     Reportes._pendingFilename = filename;
     const frame = document.getElementById('preview-frame');
@@ -2093,13 +2132,18 @@ const Reportes = {
     });
     const btn = document.getElementById('preview-download-btn');
     btn.disabled = false;
-    btn.textContent = 'Descargar PDF';
+    const label = opts.downloadLabel || 'Descargar PDF';
+    btn.textContent = label;
     btn.onclick = async ()=>{
       btn.disabled = true;
       btn.textContent = 'Generando…';
-      await Reportes._exportNode(Reportes._pendingHtml, Reportes._pendingFilename);
+      if(opts.onDownload){
+        await opts.onDownload();
+      } else {
+        await Reportes._exportNode(Reportes._pendingHtml, Reportes._pendingFilename);
+      }
       Reportes.cerrarPreview();
-      toast('PDF generado','ok');
+      toast(opts.successMsg || 'PDF generado','ok');
     };
   },
   cerrarPreview(){
@@ -2112,21 +2156,17 @@ const Reportes = {
     const aux = State.session && State.session.auxiliar;
     const btn = document.getElementById('rep-btn-generar');
     if(!btn || !aux) return;
-    if(aux.rol==='transportista'){
-      btn.textContent = 'Generar cuenta de cobro (Excel)';
-      document.getElementById('view-sub').textContent = 'Genera tu cuenta de cobro en Excel a partir de tus días registrados';
-    } else {
-      btn.textContent = 'Generar reporte en PDF';
-      document.getElementById('view-sub').textContent = 'Genera tu cuenta de cobro en PDF';
-    }
+    btn.textContent = 'Generar reporte en PDF';
+    document.getElementById('view-sub').textContent = 'Genera tu cuenta de cobro en PDF';
   },
   async generarAuxiliar(){
     const desde = document.getElementById('rep-desde').value;
     const hasta = document.getElementById('rep-hasta').value;
     const aux = State.session.auxiliar;
     const registros = await Reportes._fetchRegistros(aux.id, desde||null, hasta||null);
-    if(aux.rol==='transportista'){
-      await Reportes.generarCuentaCobroTransportista(aux, registros, desde||null, hasta||null);
+    if(aux.tipo_usuario==='transportista'){
+      const html = Reportes.buildCuentaCobroTransportistaPreviewHTML(aux, registros, desde||null, hasta||null);
+      Reportes.mostrarPreview(html, `cuenta_de_cobro_${aux.cedula}.pdf`);
       return;
     }
     const html = Reportes.buildCuentaCobroHTML(aux, registros, desde||null, hasta||null);
@@ -2139,8 +2179,9 @@ const Reportes = {
     const hasta = document.getElementById('admrep-hasta').value;
     const aux = State.auxiliaresCache.find(a=>a.id===auxId);
     const registros = await Reportes._fetchRegistros(auxId, desde, hasta);
-    if(aux.rol==='transportista'){
-      await Reportes.generarCuentaCobroTransportista(aux, registros, desde||null, hasta||null);
+    if(aux.tipo_usuario==='transportista'){
+      const html = Reportes.buildCuentaCobroTransportistaPreviewHTML(aux, registros, desde||null, hasta||null);
+      Reportes.mostrarPreview(html, `cuenta_de_cobro_${aux.cedula}.pdf`);
       return;
     }
     const html = Reportes.buildCuentaCobroHTML(aux, registros, desde, hasta);
@@ -2227,7 +2268,7 @@ const AdminMod = {
       <tr>
         <td>${esc(a.nombre_completo)||'<span class="small-note">Sin completar</span>'}</td>
         <td class="mono">${esc(a.cedula)}</td>
-        <td>${a.rol==='transportista'?'Transportista':'Auxiliar'}</td>
+        <td>${a.tipo_usuario==='transportista'?'Transportista':'Auxiliar'}</td>
         <td>${esc(a.telefono)||'-'}</td>
         <td style="white-space:nowrap;">
           <button class="btn btn-navy btn-sm" onclick="AdminMod.verAuxiliar('${a.id}')">Ver</button>
@@ -2273,8 +2314,8 @@ const AdminMod = {
         </div>
         <div class="field" style="max-width:260px;"><label>Tipo</label>
           <select id="da-rol">
-            <option value="auxiliar" ${a.rol!=='transportista'?'selected':''}>Auxiliar</option>
-            <option value="transportista" ${a.rol==='transportista'?'selected':''}>Transportista</option>
+            <option value="auxiliar" ${a.tipo_usuario!=='transportista'?'selected':''}>Auxiliar</option>
+            <option value="transportista" ${a.tipo_usuario==='transportista'?'selected':''}>Transportista</option>
           </select>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -2310,7 +2351,7 @@ const AdminMod = {
       correo: document.getElementById('da-correo').value.trim(),
       direccion: document.getElementById('da-direccion').value.trim(),
       password: document.getElementById('da-pass').value.trim(),
-      rol: document.getElementById('da-rol').value || 'auxiliar'
+      tipo_usuario: document.getElementById('da-rol').value || 'auxiliar'
     };
     const { error } = await sb.from('auxiliares').update(payload).eq('id', id);
     if(error){ toast('No se pudo guardar','err'); return; }
@@ -2480,11 +2521,11 @@ const AdminMod = {
   },
   fillAuxSelect(){
     const sel = document.getElementById('admrep-auxiliar');
-    sel.innerHTML = '<option value="">Selecciona…</option>' + State.auxiliaresCache.map(a=>`<option value="${a.id}">${esc(a.nombre_completo||a.cedula)} (CC ${esc(a.cedula)}) · ${a.rol==='transportista'?'Transportista':'Auxiliar'}</option>`).join('');
+    sel.innerHTML = '<option value="">Selecciona…</option>' + State.auxiliaresCache.map(a=>`<option value="${a.id}">${esc(a.nombre_completo||a.cedula)} (CC ${esc(a.cedula)}) · ${a.tipo_usuario==='transportista'?'Transportista':'Auxiliar'}</option>`).join('');
     if(!State.auxiliaresCache.length){
       sb.from('auxiliares').select('*').then(({data})=>{
         State.auxiliaresCache = data||[];
-        sel.innerHTML = '<option value="">Selecciona…</option>' + State.auxiliaresCache.map(a=>`<option value="${a.id}">${esc(a.nombre_completo||a.cedula)} (CC ${esc(a.cedula)}) · ${a.rol==='transportista'?'Transportista':'Auxiliar'}</option>`).join('');
+        sel.innerHTML = '<option value="">Selecciona…</option>' + State.auxiliaresCache.map(a=>`<option value="${a.id}">${esc(a.nombre_completo||a.cedula)} (CC ${esc(a.cedula)}) · ${a.tipo_usuario==='transportista'?'Transportista':'Auxiliar'}</option>`).join('');
         AdminMod.actualizarBotonReporte();
       });
     }
@@ -2494,8 +2535,7 @@ const AdminMod = {
     const sel = document.getElementById('admrep-auxiliar');
     const btn = document.getElementById('admrep-btn-generar');
     if(!sel || !btn) return;
-    const aux = State.auxiliaresCache.find(a=>a.id===sel.value);
-    btn.textContent = (aux && aux.rol==='transportista') ? 'Generar cuenta de cobro (Excel)' : 'Generar reporte en PDF';
+    btn.textContent = 'Generar reporte en PDF';
   }
 };
 
